@@ -1,16 +1,4 @@
 import React, { useState } from 'react';
-import {
-  Minimize2,
-  Pin,
-  PinOff,
-  Volume2,
-  VolumeX,
-  Plus,
-  ExternalLink,
-  Layers,
-  History,
-  ChevronDown,
-} from 'lucide-react';
 import { Task, TaskStatus, AiRun, TimelineEvent } from '@workpulse/shared';
 import { AiRunCard } from './AiRunCard';
 import { TaskList } from './TaskList';
@@ -81,14 +69,16 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
     <div
       className="w11-acrylic-panel"
       style={{
-        width: 360,
-        padding: '16px',
+        width: '100%',
+        maxWidth: 360,
+        padding: '14px',
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
+        boxSizing: 'border-box',
       }}
     >
-      {/* Windows 11 Header + Apple Glass Control Buttons */}
+      {/* Title Header with Monotone Window Controls */}
       <div
         className="titlebar-drag-region"
         style={{
@@ -113,56 +103,49 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
               {timeStr}
             </span>
           </div>
-          <div
-            style={{
-              fontSize: 12,
-              fontWeight: 500,
-              color: 'var(--text-secondary)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-              marginTop: 2,
-            }}
-          >
-            <span>{fullDateStr}</span>
-            <ChevronDown size={13} style={{ opacity: 0.7 }} />
-          </div>
+          <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }}>
+            {fullDateStr}
+          </span>
         </div>
 
-        {/* Apple-style circular glass buttons */}
-        <div className="non-drag" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {/* Monotone Header Action Buttons (No bulky multi-color icons) */}
+        <div className="non-drag" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <button
             onClick={onToggleMute}
-            className="apple-icon-btn"
-            title={isMuted ? 'Unmute haptic sounds' : 'Mute haptic sounds'}
+            className={`apple-btn-text ${isMuted ? '' : 'active'}`}
+            title={isMuted ? 'Unmute' : 'Mute'}
           >
-            {isMuted ? <VolumeX size={13} /> : <Volume2 size={13} />}
+            {isMuted ? 'Muted' : 'Sound'}
           </button>
           <button
             onClick={onToggleAlwaysOnTop}
-            className="apple-icon-btn"
-            style={{ color: isAlwaysOnTop ? 'var(--apple-blue)' : 'var(--text-tertiary)' }}
-            title={isAlwaysOnTop ? 'Always on Top (Enabled)' : 'Always on Top (Disabled)'}
+            className={`apple-btn-text ${isAlwaysOnTop ? 'active' : ''}`}
+            title="Always on Top"
           >
-            {isAlwaysOnTop ? <Pin size={13} /> : <PinOff size={13} />}
+            Pin
           </button>
-          <button onClick={onCollapse} className="apple-icon-btn" title="Collapse to floating pill">
-            <Minimize2 size={13} />
+          <button
+            onClick={onCollapse}
+            className="apple-btn-text"
+            style={{ padding: '4px 7px' }}
+            title="Collapse to pill"
+          >
+            −
           </button>
         </div>
       </div>
 
-      {/* Daily Progress Bar (Apple Health / macOS style capsule) */}
+      {/* Monotone Progress Bar */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 600 }}>
           <span style={{ color: 'var(--text-secondary)' }}>Today’s Workload</span>
-          <span style={{ color: 'var(--apple-blue)', fontFamily: 'JetBrains Mono, SF Mono, monospace' }}>
+          <span style={{ color: '#ffffff', fontFamily: 'JetBrains Mono, SF Mono, monospace' }}>
             {completionPercentage}%
           </span>
         </div>
         <div
           style={{
-            height: 5,
+            height: 4,
             borderRadius: 'var(--radius-pill)',
             backgroundColor: 'rgba(255, 255, 255, 0.08)',
             overflow: 'hidden',
@@ -172,40 +155,40 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
             style={{
               height: '100%',
               width: `${completionPercentage}%`,
-              background: 'linear-gradient(90deg, var(--apple-blue), var(--apple-emerald))',
+              background: '#ffffff',
               borderRadius: 'var(--radius-pill)',
-              transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+              transition: 'width 0.35s ease',
             }}
           />
         </div>
       </div>
 
-      {/* Card 1: Elevated AI Companion Telemetry */}
+      {/* AI Companion Card */}
       <AiRunCard aiRun={aiRun} />
 
-      {/* Card 2: Workload & Focus Panel (Windows 11 Calendar & Focus style card) */}
+      {/* Workload & Focus Panel */}
       <div
         className="w11-card"
         style={{
-          padding: '12px 14px',
+          padding: '12px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 12,
+          gap: 10,
         }}
       >
-        {/* Apple Segmented Control */}
+        {/* Monotone Typographic Segmented Control (No icons) */}
         <div className="apple-segmented-container">
           <button
             onClick={() => setActiveTab('tasks')}
             className={`apple-segmented-item ${activeTab === 'tasks' ? 'active' : ''}`}
           >
-            <Layers size={12} /> Tasks ({tasks.length})
+            Tasks ({tasks.length})
           </button>
           <button
             onClick={() => setActiveTab('timeline')}
             className={`apple-segmented-item ${activeTab === 'timeline' ? 'active' : ''}`}
           >
-            <History size={12} /> Timeline ({timeline.length})
+            Timeline ({timeline.length})
           </button>
         </div>
 
@@ -222,7 +205,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
           <TimelineView timeline={timeline} />
         )}
 
-        {/* Focus Timer Stepper & Primary Focus Button (Matches Windows 11 screenshot: [-] 30 mins [+] [▶ Focus]) */}
+        {/* Focus Timer Stepper & Primary Action */}
         <FocusTimer
           seconds={focusSeconds}
           isRunning={isTimerRunning}
@@ -239,35 +222,30 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          paddingTop: 4,
+          paddingTop: 2,
           paddingLeft: 2,
           paddingRight: 2,
         }}
       >
-        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
           {doneCount} done · {remainingCount} remaining
         </span>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <button
             onClick={() => onAddTask('New Task', 'NOW')}
-            className="apple-btn-primary"
-            style={{ fontSize: 11, padding: '4px 10px' }}
+            className="apple-btn-text"
             title="Add immediate task"
           >
-            <Plus size={11} /> Task
+            + Task
           </button>
           <button
             onClick={onOpenIde}
-            className="apple-btn-primary"
-            style={{
-              fontSize: 11,
-              padding: '4px 10px',
-              color: 'var(--apple-blue)',
-            }}
-            title="Open Current Task in IDE"
+            className="apple-btn-text"
+            style={{ color: '#ffffff' }}
+            title="Open in IDE"
           >
-            <ExternalLink size={11} /> Open IDE
+            Open IDE
           </button>
         </div>
       </div>

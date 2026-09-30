@@ -1,5 +1,4 @@
 import React from 'react';
-import { Play, Pause, RotateCcw, Minus, Plus } from 'lucide-react';
 
 interface FocusTimerProps {
   seconds: number;
@@ -36,16 +35,16 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
         border: '1px solid rgba(255, 255, 255, 0.05)',
       }}
     >
-      {/* Stepper on the left (matches Windows 11 Focus UI: [-] 30 mins [+]) */}
+      {/* Stepper (Monotone: [-] 30 mins [+]) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <button
           onClick={() => onAdjustMinutes(-5)}
           disabled={isRunning || targetMinutes <= 5}
           className="apple-stepper-btn"
-          style={{ opacity: isRunning || targetMinutes <= 5 ? 0.4 : 1 }}
-          title="Decrease focus duration"
+          style={{ opacity: isRunning || targetMinutes <= 5 ? 0.3 : 1 }}
+          title="Decrease minutes"
         >
-          <Minus size={13} />
+          −
         </button>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 62 }}>
@@ -55,7 +54,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
                 fontFamily: 'JetBrains Mono, SF Mono, monospace',
                 fontSize: 13,
                 fontWeight: 700,
-                color: 'var(--apple-blue)',
+                color: '#ffffff',
                 letterSpacing: '0.4px',
               }}
             >
@@ -66,7 +65,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
               style={{
                 fontSize: 12,
                 fontWeight: 600,
-                color: 'var(--text-primary)',
+                color: 'var(--text-secondary)',
               }}
             >
               {targetMinutes} mins
@@ -78,42 +77,32 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
           onClick={() => onAdjustMinutes(5)}
           disabled={isRunning || targetMinutes >= 180}
           className="apple-stepper-btn"
-          style={{ opacity: isRunning || targetMinutes >= 180 ? 0.4 : 1 }}
-          title="Increase focus duration"
+          style={{ opacity: isRunning || targetMinutes >= 180 ? 0.3 : 1 }}
+          title="Increase minutes"
         >
-          <Plus size={13} />
+          +
         </button>
       </div>
 
-      {/* Focus Action Pill on the right (matches [▶ Focus] in Windows 11 & Apple Action Button) */}
+      {/* Focus / Pause Action */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         {isRunning && (
           <button
             onClick={onReset}
-            className="apple-icon-btn"
-            style={{ width: 26, height: 26 }}
+            className="apple-btn-text"
+            style={{ fontSize: 11, padding: '3px 8px' }}
             title="Reset timer"
           >
-            <RotateCcw size={11} />
+            Reset
           </button>
         )}
 
         <button
           onClick={onToggle}
           className={`apple-btn-primary ${isRunning ? 'apple-btn-focus-active' : ''}`}
-          title={isRunning ? 'Pause focus' : 'Start focus session'}
+          title={isRunning ? 'Pause focus session' : 'Start focus session'}
         >
-          {isRunning ? (
-            <>
-              <Pause size={12} fill="currentColor" />
-              <span>Pause</span>
-            </>
-          ) : (
-            <>
-              <Play size={12} fill="currentColor" />
-              <span>Focus</span>
-            </>
-          )}
+          {isRunning ? 'Pause' : 'Focus'}
         </button>
       </div>
     </div>

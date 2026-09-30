@@ -1,11 +1,4 @@
 import React, { useState } from 'react';
-import {
-  Check,
-  Plus,
-  Trash2,
-  ChevronRight,
-  ChevronDown,
-} from 'lucide-react';
 import { Task, TaskStatus } from '@workpulse/shared';
 
 interface TaskListProps {
@@ -24,12 +17,12 @@ export const TaskList: React.FC<TaskListProps> = ({
   onAddTask,
 }) => {
   const [newTitle, setNewTitle] = useState('');
-  const [selectedBucket, setSelectedBucket] = useState<TaskStatus>('NEXT');
+  const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
   const [isDoneCollapsed, setIsDoneCollapsed] = useState(false);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && newTitle.trim()) {
-      onAddTask(newTitle.trim(), selectedBucket);
+      onAddTask(newTitle.trim(), 'NEXT');
       setNewTitle('');
     }
   };
@@ -42,38 +35,41 @@ export const TaskList: React.FC<TaskListProps> = ({
   const renderTaskItem = (task: Task) => {
     const isNow = task.status === 'NOW';
     const isDone = task.status === 'DONE';
+    const isHovered = hoveredTaskId === task.id;
 
     return (
       <div
         key={task.id}
+        onMouseEnter={() => setHoveredTaskId(task.id)}
+        onMouseLeave={() => setHoveredTaskId(null)}
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '6px 8px',
           borderRadius: 'var(--radius-sm)',
-          backgroundColor: isNow ? 'rgba(10, 132, 255, 0.10)' : 'transparent',
-          border: isNow ? '1px solid rgba(10, 132, 255, 0.28)' : '1px solid transparent',
+          backgroundColor: isNow ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+          border: isNow ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid transparent',
           transition: 'all 0.15s ease',
-          gap: 9,
+          gap: 10,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0 }}>
-          {/* Apple Reminders Style Circular Checkbox */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+          {/* Monotone Circular Checkbox */}
           <button
             onClick={() => onUpdateStatus(task.id, isDone ? 'NEXT' : 'DONE')}
             className={`apple-checkbox ${isDone ? 'checked' : isNow ? 'active-now' : ''}`}
-            title={isDone ? 'Mark uncompleted' : 'Mark completed'}
+            title={isDone ? 'Mark incomplete' : 'Mark complete'}
           >
             {isDone ? (
-              <Check size={11} strokeWidth={3} color="#ffffff" />
+              <span style={{ fontSize: 11, fontWeight: 800, lineHeight: 1 }}>✓</span>
             ) : isNow ? (
               <span
                 style={{
                   width: 6,
                   height: 6,
                   borderRadius: '50%',
-                  backgroundColor: 'var(--apple-blue)',
+                  backgroundColor: '#ffffff',
                 }}
               />
             ) : null}
@@ -85,7 +81,7 @@ export const TaskList: React.FC<TaskListProps> = ({
             style={{
               fontSize: 12,
               fontWeight: isNow ? 600 : 400,
-              color: isDone ? 'var(--text-tertiary)' : 'var(--text-primary)',
+              color: isDone ? 'var(--text-tertiary)' : isNow ? '#ffffff' : 'var(--text-secondary)',
               textDecoration: isDone ? 'line-through' : 'none',
               cursor: isDone ? 'default' : 'pointer',
               whiteSpace: 'nowrap',
@@ -99,26 +95,23 @@ export const TaskList: React.FC<TaskListProps> = ({
           </span>
         </div>
 
-        {/* Apple Icon Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          {!isNow && !isDone && (
+        {/* Minimal Hover Action (no bulky icons) */}
+        <div style={{ display: 'flex', alignItems: 'center', minWidth: 20, justifyContent: 'flex-end' }}>
+          {isHovered && (
             <button
-              onClick={() => onSelectActive(task.id)}
-              className="apple-icon-btn"
-              style={{ width: 22, height: 22, fontSize: 10 }}
-              title="Set as current active task"
+              onClick={() => onDeleteTask(task.id)}
+              style={{
+                color: 'var(--text-tertiary)',
+                fontSize: 13,
+                lineHeight: 1,
+                padding: '2px 4px',
+                borderRadius: 'var(--radius-xs)',
+              }}
+              title="Delete task"
             >
-              <span style={{ fontSize: 9, fontWeight: 700 }}>NOW</span>
+              ✕
             </button>
           )}
-          <button
-            onClick={() => onDeleteTask(task.id)}
-            className="apple-icon-btn"
-            style={{ width: 22, height: 22, color: 'var(--text-tertiary)' }}
-            title="Delete task"
-          >
-            <Trash2 size={11} />
-          </button>
         </div>
       </div>
     );
@@ -126,65 +119,45 @@ export const TaskList: React.FC<TaskListProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* Apple-Style Glass Input Bar */}
+      {/* Clean Monotone Input (No ugly select dropdown) */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 6,
-          padding: '5px 10px',
+          padding: '6px 12px',
           borderRadius: 'var(--radius-pill)',
-          backgroundColor: 'rgba(0, 0, 0, 0.28)',
+          backgroundColor: 'rgba(0, 0, 0, 0.25)',
           border: '1px solid rgba(255, 255, 255, 0.08)',
         }}
       >
-        <Plus size={13} style={{ color: 'var(--text-tertiary)' }} />
         <input
           type="text"
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Add task for today... (Enter)"
+          placeholder="Add task for today... (Press Enter)"
           style={{
             flex: 1,
             background: 'transparent',
             border: 'none',
             outline: 'none',
-            color: 'var(--text-primary)',
+            color: '#ffffff',
             fontSize: 12,
             fontFamily: 'inherit',
           }}
         />
-        <select
-          value={selectedBucket}
-          onChange={(e) => setSelectedBucket(e.target.value as TaskStatus)}
-          style={{
-            background: 'rgba(255, 255, 255, 0.08)',
-            border: '1px solid rgba(255, 255, 255, 0.10)',
-            borderRadius: 'var(--radius-pill)',
-            color: 'var(--text-secondary)',
-            fontSize: 10,
-            padding: '2px 8px',
-            outline: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          <option value="NOW">Now</option>
-          <option value="NEXT">Next</option>
-          <option value="LATER">Later</option>
-        </select>
       </div>
 
       {/* Task Buckets */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 180, overflowY: 'auto' }}>
-        {/* NOW Task */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 190, overflowY: 'auto' }}>
+        {/* CURRENT Task */}
         {nowTask && (
           <div>
             <div
               style={{
                 fontSize: 10,
                 fontWeight: 700,
-                color: 'var(--apple-blue)',
+                color: 'var(--text-tertiary)',
                 textTransform: 'uppercase',
                 letterSpacing: 0.6,
                 marginBottom: 3,
@@ -204,7 +177,7 @@ export const TaskList: React.FC<TaskListProps> = ({
               style={{
                 fontSize: 10,
                 fontWeight: 700,
-                color: 'var(--text-secondary)',
+                color: 'var(--text-tertiary)',
                 textTransform: 'uppercase',
                 letterSpacing: 0.6,
                 marginBottom: 3,
@@ -249,7 +222,7 @@ export const TaskList: React.FC<TaskListProps> = ({
               style={{
                 fontSize: 10,
                 fontWeight: 700,
-                color: 'var(--apple-emerald)',
+                color: 'var(--text-tertiary)',
                 textTransform: 'uppercase',
                 letterSpacing: 0.6,
                 marginBottom: 3,
@@ -257,11 +230,11 @@ export const TaskList: React.FC<TaskListProps> = ({
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 4,
+                gap: 5,
               }}
             >
-              {isDoneCollapsed ? <ChevronRight size={11} /> : <ChevronDown size={11} />}
-              Completed ({doneTasks.length})
+              <span>{isDoneCollapsed ? '▶' : '▼'}</span>
+              <span>Completed ({doneTasks.length})</span>
             </div>
             {!isDoneCollapsed && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
