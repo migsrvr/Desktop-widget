@@ -15,8 +15,10 @@ pub struct ServerState {
     pub tx: broadcast::Sender<String>,
 }
 
-pub async fn start_server(port: u16) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let (tx, _rx) = broadcast::channel::<String>(100);
+pub async fn start_server_with_channel(
+    port: u16,
+    tx: broadcast::Sender<String>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let state = Arc::new(ServerState { tx });
 
     let cors = CorsLayer::new()
@@ -39,6 +41,12 @@ pub async fn start_server(port: u16) -> Result<(), Box<dyn std::error::Error + S
     axum::serve(listener, app).await?;
 
     Ok(())
+}
+
+#[allow(dead_code)]
+pub async fn start_server(port: u16) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let (tx, _rx) = broadcast::channel::<String>(100);
+    start_server_with_channel(port, tx).await
 }
 
 async fn health_handler() -> impl IntoResponse {

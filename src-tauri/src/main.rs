@@ -2,6 +2,7 @@
 
 mod db;
 mod server;
+mod watcher;
 
 use db::{Database, TaskRecord, TimelineEventRecord};
 use std::sync::Mutex;
@@ -60,11 +61,16 @@ fn main() {
         db: Mutex::new(db),
     };
 
-    // 2. Spawn embedded Tokio WebSocket/HTTP server
+    // 2. Spawn embedded Tokio WebSocket/HTTP server & native Antigravity transcript watcher
     std::thread::spawn(|| {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
-            if let Err(e) = server::start_server(41789).await {
+            let (tx, _rx) = tokio::sync::broadcast::channel::<String>(100);
+
+            // Automatically watch Antigravity IDE transcript logs and broadcast real-time actions
+            watcher::start_transcript_watcher(tx.clone());
+
+            if let Err(e) = server::start_server_with_channel(41789, tx).await {
                 eprintln!("[WorkPulse] Server error: {}", e);
             }
         });
