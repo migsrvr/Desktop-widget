@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Rust / Cargo
+target/
+src-tauri/target/
+Cargo.lock
+
+# Build artifacts
+dist/
+build/
+out/
+*.vsix
+
+# Environment & local
+.env
+.env.local
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

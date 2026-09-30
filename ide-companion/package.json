@@ -1,0 +1,51 @@
+{
+  "name": "workpulse-vscode",
+  "displayName": "WorkPulse Companion",
+  "description": "Companion extension connecting VS Code to WorkPulse desktop widget",
+  "version": "0.1.0",
+  "publisher": "workpulse",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "workpulse.connect",
+        "title": "WorkPulse: Reconnect to Desktop Widget"
+      },
+      {
+        "command": "workpulse.simulateAiStart",
+        "title": "WorkPulse: Simulate AI Run Started"
+      },
+      {
+        "command": "workpulse.simulateAiWaiting",
+        "title": "WorkPulse: Simulate AI Waiting for Approval"
+      },
+      {
+        "command": "workpulse.simulateAiDone",
+        "title": "WorkPulse: Simulate AI Run Completed"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.8.0"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "workpulse-root",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WorkPulse - Windows Desktop Workload Companion & IDE AI Monitor",
+  "workspaces": [
+    "shared",
+    "ui",
+    "ide-companion"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build:ui": "npm run --workspace=ui build",
+    "dev:ui": "npm run --workspace=ui dev",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.0"
+  }
+}
