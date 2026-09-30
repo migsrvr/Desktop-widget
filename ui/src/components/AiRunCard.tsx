@@ -43,43 +43,29 @@ export const AiRunCard: React.FC<AiRunCardProps> = ({ aiRun, onApprove }) => {
     );
   }
 
-  const getStatusPill = () => {
-    const isWorking = aiRun.status === 'WORKING' || aiRun.status === 'PLANNING' || aiRun.status === 'RUNNING_TOOLS';
-    const isWaiting = aiRun.status === 'WAITING_INPUT';
-
-    return (
-      <span
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 6,
-          padding: '2px 8px',
-          borderRadius: 'var(--radius-pill)',
-          backgroundColor: isWaiting ? 'rgba(255, 255, 255, 0.20)' : 'rgba(255, 255, 255, 0.10)',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          color: '#ffffff',
-          fontSize: 10,
-          fontWeight: 700,
-          letterSpacing: '0.4px',
-          textTransform: 'uppercase',
-        }}
-      >
-        {isWorking && (
-          <span
-            className="animate-mono-pulse"
-            style={{
-              width: 5,
-              height: 5,
-              borderRadius: '50%',
-              backgroundColor: '#ffffff',
-              display: 'inline-block',
-            }}
-          />
-        )}
-        {aiRun.status.replace('_', ' ')}
-      </span>
-    );
+  const getStatusLabel = () => {
+    switch (aiRun.status) {
+      case 'WAITING_INPUT':
+        return 'WAITING';
+      case 'RUNNING_TOOLS':
+      case 'WORKING':
+        return 'WORKING';
+      case 'PLANNING':
+        return 'PLANNING';
+      case 'COMPLETED':
+        return 'DONE';
+      case 'FAILED':
+        return 'ERROR';
+      case 'CANCELLED':
+        return 'STOPPED';
+      default:
+        return aiRun.status;
+    }
   };
+
+  const isWorking =
+    aiRun.status === 'WORKING' || aiRun.status === 'PLANNING' || aiRun.status === 'RUNNING_TOOLS';
+  const isWaiting = aiRun.status === 'WAITING_INPUT';
 
   return (
     <div
@@ -92,18 +78,67 @@ export const AiRunCard: React.FC<AiRunCardProps> = ({ aiRun, onApprove }) => {
       }}
     >
       {/* Header Row: Agent Name, Status Pill & Elapsed Time */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
-          AI · {aiRun.agentName}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: 'var(--text-secondary)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {aiRun.agentName}
         </span>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {getStatusPill()}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '2px 8px',
+              borderRadius: 'var(--radius-pill)',
+              backgroundColor: isWaiting ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.10)',
+              border: '1px solid rgba(255, 255, 255, 0.16)',
+              color: '#ffffff',
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.5px',
+              textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
+          >
+            {isWorking && (
+              <span
+                className="animate-mono-pulse"
+                style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: '50%',
+                  backgroundColor: '#ffffff',
+                  display: 'inline-block',
+                }}
+              />
+            )}
+            {getStatusLabel()}
+          </span>
+
           <span
             style={{
               fontFamily: 'JetBrains Mono, SF Mono, monospace',
               fontSize: 11,
               color: 'var(--text-tertiary)',
+              whiteSpace: 'nowrap',
             }}
           >
             {elapsed}

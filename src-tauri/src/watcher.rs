@@ -83,7 +83,7 @@ pub fn start_transcript_watcher(tx: broadcast::Sender<String>) {
                                         if t == "PLANNER_RESPONSE" {
                                             if val.get("content").is_some() {
                                                 description =
-                                                    "Awaiting your review / next task".to_string();
+                                                    "Waiting for your next task".to_string();
                                                 status = "WAITING_INPUT".to_string();
                                             } else {
                                                 description =

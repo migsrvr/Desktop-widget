@@ -95,7 +95,7 @@ function checkTranscript() {
         status = 'RUNNING_TOOLS';
       } else if (step.type === 'PLANNER_RESPONSE' && step.status === 'DONE') {
         if (step.content) {
-          description = 'Awaiting your review / next task';
+          description = 'Waiting for your next task';
           status = 'WAITING_INPUT';
         } else {
           description = 'Thinking and planning next steps...';
