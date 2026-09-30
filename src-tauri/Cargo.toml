@@ -19,3 +19,10 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 chrono = { version = "0.4", features = ["serde"] }
 dirs = "5.0"
 futures-util = "0.3"
+
+[profile.release]
+opt-level = "s"      # Optimize for small binary size and cache locality
+lto = true           # Link Time Optimization across all crates
+codegen-units = 1    # Maximize dead-code elimination and inlining
+panic = "abort"      # Strip unwinding landing pads
+strip = true         # Strip all symbols and debuginfo from final .exe
