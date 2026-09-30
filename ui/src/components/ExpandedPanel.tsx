@@ -17,6 +17,7 @@ interface ExpandedPanelProps {
   focusSeconds: number;
   targetMinutes: number;
   onCollapse: () => void;
+  onMinimizeToTaskbar?: () => void;
   onToggleAlwaysOnTop: () => void;
   onToggleMute: () => void;
   onToggleTimer: () => void;
@@ -41,6 +42,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   focusSeconds,
   targetMinutes,
   onCollapse,
+  onMinimizeToTaskbar,
   onToggleAlwaysOnTop,
   onToggleMute,
   onToggleTimer,
@@ -124,11 +126,21 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
           >
             Pin
           </button>
+          {onMinimizeToTaskbar && (
+            <button
+              onClick={onMinimizeToTaskbar}
+              className="apple-btn-text"
+              style={{ padding: '3px 6px', fontSize: 10 }}
+              title="Minimize to taskbar"
+            >
+              _
+            </button>
+          )}
           <button
             onClick={onCollapse}
             className="apple-btn-text"
-            style={{ padding: '4px 7px' }}
-            title="Collapse to pill"
+            style={{ padding: '3px 7px', fontSize: 12 }}
+            title="Collapse to compact pill"
           >
             −
           </button>

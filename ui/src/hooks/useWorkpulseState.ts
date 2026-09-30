@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { invoke, isTauri } from '@tauri-apps/api/core';
 import {
   Task,
   TaskStatus,
@@ -177,13 +178,37 @@ export function useWorkpulseState() {
     haptics.hapticPop(200);
   }, []);
 
+  // Dynamically resize Tauri native window to match pill vs flyout
+  useEffect(() => {
+    if (isTauri()) {
+      if (isExpanded) {
+        invoke('set_widget_size', { width: 380, height: 600 }).catch(() => {});
+      } else {
+        invoke('set_widget_size', { width: 345, height: 48 }).catch(() => {});
+      }
+    }
+  }, [isExpanded]);
+
   const toggleExpanded = useCallback(() => {
     haptics.snapClick();
     setIsExpanded((prev) => !prev);
   }, []);
 
   const toggleAlwaysOnTop = useCallback(() => {
-    setIsAlwaysOnTop((prev) => !prev);
+    setIsAlwaysOnTop((prev) => {
+      const next = !prev;
+      if (isTauri()) {
+        invoke('toggle_always_on_top', { enable: next }).catch(() => {});
+      }
+      return next;
+    });
+    haptics.snapClick();
+  }, []);
+
+  const minimizeToTaskbar = useCallback(() => {
+    if (isTauri()) {
+      invoke('minimize_window').catch(() => {});
+    }
     haptics.snapClick();
   }, []);
 
@@ -352,6 +377,7 @@ export function useWorkpulseState() {
     deleteTask,
     toggleExpanded,
     toggleAlwaysOnTop,
+    minimizeToTaskbar,
     toggleMute,
     toggleTimer,
     resetTimer,

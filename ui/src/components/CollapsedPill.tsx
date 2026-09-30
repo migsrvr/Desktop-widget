@@ -10,6 +10,7 @@ interface CollapsedPillProps {
   isTimerRunning: boolean;
   onExpand: () => void;
   onToggleTimer: (e: React.MouseEvent) => void;
+  onMinimizeToTaskbar?: () => void;
 }
 
 export const CollapsedPill: React.FC<CollapsedPillProps> = ({
@@ -21,6 +22,7 @@ export const CollapsedPill: React.FC<CollapsedPillProps> = ({
   isTimerRunning,
   onExpand,
   onToggleTimer,
+  onMinimizeToTaskbar,
 }) => {
   const formatTime = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60);
@@ -34,26 +36,48 @@ export const CollapsedPill: React.FC<CollapsedPillProps> = ({
 
   return (
     <div
-      onClick={onExpand}
+      data-tauri-drag-region
       className="titlebar-drag-region"
+      onDoubleClick={onExpand}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 9,
-        padding: '6px 12px 6px 10px',
+        gap: 8,
+        padding: '4px 8px 4px 10px',
         borderRadius: 'var(--radius-pill)',
-        cursor: 'pointer',
-        backgroundColor: 'rgba(18, 18, 20, 0.90)',
+        backgroundColor: 'rgba(18, 18, 20, 0.94)',
         backdropFilter: 'blur(40px) saturate(180%)',
         WebkitBackdropFilter: 'blur(40px) saturate(180%)',
         border: '1px solid rgba(255, 255, 255, 0.12)',
-        boxShadow: '0 16px 36px -6px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.12)',
+        boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.75), inset 0 1px 0 0 rgba(255, 255, 255, 0.14)',
         maxWidth: 340,
-        transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+        height: 38,
+        boxSizing: 'border-box',
+        cursor: 'grab',
+        transition: 'border-color 0.2s ease',
       }}
+      title="Double-click to expand · Drag to reposition"
     >
+      {/* Subtle Drag Grip Handle */}
+      <span
+        data-tauri-drag-region
+        style={{
+          fontSize: 9,
+          letterSpacing: '-1px',
+          color: 'var(--text-tertiary)',
+          userSelect: 'none',
+          cursor: 'grab',
+          marginRight: -2,
+        }}
+      >
+        :::
+      </span>
+
       {/* Monotone Breathing Status Dot */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        data-tauri-drag-region
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
         <span
           className={isAiWorking ? 'animate-mono-pulse' : ''}
           style={{
@@ -61,7 +85,7 @@ export const CollapsedPill: React.FC<CollapsedPillProps> = ({
             height: 7,
             borderRadius: '50%',
             backgroundColor: '#ffffff',
-            opacity: isAiWorking ? 1 : isAiWaiting ? 0.9 : 0.4,
+            opacity: isAiWorking ? 1 : isAiWaiting ? 0.9 : 0.45,
             display: 'inline-block',
           }}
           title={aiRun ? `AI: ${aiRun.status}` : 'WorkPulse Idle'}
@@ -70,14 +94,16 @@ export const CollapsedPill: React.FC<CollapsedPillProps> = ({
 
       {/* Task Snippet */}
       <div
+        data-tauri-drag-region
         style={{
           display: 'flex',
           flexDirection: 'column',
-          minWidth: 80,
-          maxWidth: 140,
+          minWidth: 70,
+          maxWidth: 120,
         }}
       >
         <span
+          data-tauri-drag-region
           style={{
             fontSize: 11,
             fontWeight: 600,
@@ -87,18 +113,19 @@ export const CollapsedPill: React.FC<CollapsedPillProps> = ({
             color: '#ffffff',
           }}
         >
-          {activeTask ? activeTask.title : 'No active task'}
+          {activeTask ? activeTask.title : 'Idle'}
         </span>
       </div>
 
       {/* Monotone Ratio Badge e.g. 2 / 5 */}
       <div
+        data-tauri-drag-region
         style={{
           fontSize: 10,
           fontWeight: 700,
           color: '#ffffff',
           backgroundColor: 'rgba(255, 255, 255, 0.10)',
-          padding: '2px 7px',
+          padding: '1px 6px',
           borderRadius: 'var(--radius-pill)',
           border: '1px solid rgba(255, 255, 255, 0.14)',
         }}
@@ -113,32 +140,63 @@ export const CollapsedPill: React.FC<CollapsedPillProps> = ({
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 4,
-          fontSize: 11,
+          gap: 3,
+          fontSize: 10,
           fontFamily: 'JetBrains Mono, SF Mono, monospace',
           color: '#ffffff',
-          padding: '3px 8px',
+          padding: '2px 6px',
           borderRadius: 'var(--radius-pill)',
           backgroundColor: isTimerRunning ? 'rgba(255, 255, 255, 0.20)' : 'rgba(255, 255, 255, 0.08)',
           border: '1px solid rgba(255, 255, 255, 0.10)',
+          cursor: 'pointer',
         }}
         title="Toggle focus timer"
       >
         <span>{formatTime(focusSeconds)}</span>
       </div>
 
-      {/* Monotone Expand Symbol */}
-      <span
-        className="non-drag"
-        style={{
-          color: 'var(--text-tertiary)',
-          fontSize: 10,
-          fontWeight: 700,
-          paddingLeft: 2,
-        }}
-      >
-        ↗
-      </span>
+      {/* Quick Action Buttons (Non-drag) */}
+      <div className="non-drag" style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+        {onMinimizeToTaskbar && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onMinimizeToTaskbar();
+            }}
+            className="apple-btn-text"
+            style={{
+              padding: '1px 5px',
+              fontSize: 9,
+              height: 20,
+              minWidth: 18,
+            }}
+            title="Minimize to taskbar"
+          >
+            _
+          </button>
+        )}
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onExpand();
+          }}
+          className="apple-btn-text"
+          style={{
+            padding: '1px 6px',
+            fontSize: 10,
+            fontWeight: 700,
+            height: 20,
+            minWidth: 20,
+            color: '#ffffff',
+            backgroundColor: 'rgba(255, 255, 255, 0.12)',
+            borderColor: 'rgba(255, 255, 255, 0.18)',
+          }}
+          title="Expand WorkPulse panel"
+        >
+          ↗
+        </button>
+      </div>
     </div>
   );
 };

@@ -54,6 +54,24 @@ fn toggle_always_on_top(app: AppHandle, enable: bool) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn set_widget_size(app: AppHandle, width: f64, height: f64) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        window
+            .set_size(tauri::Size::Logical(tauri::LogicalSize { width, height }))
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn minimize_window(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        window.minimize().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 fn main() {
     // 1. Initialize SQLite Database
     let db = Database::init().expect("Failed to initialize SQLite database");
@@ -85,7 +103,9 @@ fn main() {
             remove_task,
             add_timeline_event,
             get_timeline,
-            toggle_always_on_top
+            toggle_always_on_top,
+            set_widget_size,
+            minimize_window
         ])
         .setup(|app| {
             // Build Windows System Tray
