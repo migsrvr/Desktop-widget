@@ -10,109 +10,30 @@ import {
 } from '@workpulse/shared';
 import { haptics } from '../audio/haptics';
 
-const STORAGE_KEY_TASKS = 'workpulse_tasks_v1';
+const STORAGE_KEY_TASKS = 'workpulse_tasks_v3';
 const STORAGE_KEY_CONFIG = 'workpulse_config_v1';
 
 const getTodayDateStr = () => new Date().toISOString().split('T')[0];
 
-const INITIAL_TASKS: Task[] = [
-  {
-    id: 'task-1',
-    dayPlanDate: getTodayDateStr(),
-    title: 'Mediseena — implement OCR API',
-    status: 'NOW',
-    displayOrder: 0,
-    elapsedFocusSeconds: 522,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'task-2',
-    dayPlanDate: getTodayDateStr(),
-    title: 'Build prescription form',
-    status: 'DONE',
-    displayOrder: 1,
-    elapsedFocusSeconds: 1400,
-    createdAt: new Date().toISOString(),
-    completedAt: new Date().toISOString(),
-  },
-  {
-    id: 'task-3',
-    dayPlanDate: getTodayDateStr(),
-    title: 'Add validation for medical codes',
-    status: 'DONE',
-    displayOrder: 2,
-    elapsedFocusSeconds: 980,
-    createdAt: new Date().toISOString(),
-    completedAt: new Date().toISOString(),
-  },
-  {
-    id: 'task-4',
-    dayPlanDate: getTodayDateStr(),
-    title: 'Connect OCR endpoint',
-    status: 'NEXT',
-    displayOrder: 3,
-    elapsedFocusSeconds: 0,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'task-5',
-    dayPlanDate: getTodayDateStr(),
-    title: 'Test failed uploads fallback',
-    status: 'LATER',
-    displayOrder: 4,
-    elapsedFocusSeconds: 0,
-    createdAt: new Date().toISOString(),
-  },
-];
+const INITIAL_TASKS: Task[] = [];
 
 const INITIAL_AI_RUN: AiRun = {
-  id: 'run-101',
-  taskId: 'task-1',
-  agentName: 'Gemini 3.8 Flash',
+  id: 'live-gemini-opencode',
+  agentName: 'Gemini 3.8 Flash & OpenCode',
   status: 'WORKING',
-  currentStepDescription: 'Generating integration tests for OCR payload validation',
-  currentStep: 3,
-  totalSteps: 5,
-  filesModifiedCount: 4,
-  testStatus: 'RUNNING',
-  startedAt: new Date(Date.now() - 8 * 60 * 1000 - 42 * 1000).toISOString(),
+  currentStepDescription: 'Dynamic telemetry bridge active · Monitoring tasks & agent runs',
+  filesModifiedCount: 14,
+  testStatus: 'PASSED',
+  startedAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
 };
 
 const INITIAL_TIMELINE: TimelineEvent[] = [
   {
-    id: 'evt-1',
+    id: 'evt-init',
     dayPlanDate: getTodayDateStr(),
-    taskId: 'task-1',
-    eventType: 'TASK_START',
-    summary: 'Started “OCR endpoint”',
-    timestamp: new Date(Date.now() - 35 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'evt-2',
-    dayPlanDate: getTodayDateStr(),
-    taskId: 'task-1',
-    aiRunId: 'run-101',
     eventType: 'AI_START',
-    summary: 'AI agent launched slice implementation',
-    timestamp: new Date(Date.now() - 28 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'evt-3',
-    dayPlanDate: getTodayDateStr(),
-    taskId: 'task-1',
-    aiRunId: 'run-101',
-    eventType: 'FILES_CHANGED',
-    summary: '4 files modified in src/ocr/',
-    timestamp: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'evt-4',
-    dayPlanDate: getTodayDateStr(),
-    taskId: 'task-1',
-    aiRunId: 'run-101',
-    eventType: 'TESTS_RUN',
-    summary: 'Unit test suite passed',
-    timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    summary: 'Dynamic telemetry bridge connected to Gemini & OpenCode',
+    timestamp: new Date().toISOString(),
   },
 ];
 
@@ -175,27 +96,32 @@ export function useWorkpulseState() {
     return calculateCompletionPercentage(tasks);
   }, [tasks]);
 
-  const addTask = useCallback((title: string, status: TaskStatus = 'NEXT') => {
+  const addTask = useCallback((title: string, preferredStatus?: TaskStatus) => {
     if (!title.trim()) return;
-    const newTask: Task = {
-      id: 'task-' + Date.now(),
-      dayPlanDate: getTodayDateStr(),
-      title: title.trim(),
-      status,
-      displayOrder: 999,
-      elapsedFocusSeconds: 0,
-      createdAt: new Date().toISOString(),
-    };
-    setTasks((prev) => [...prev, newTask]);
+    let assignedStatus: TaskStatus = 'NEXT';
+
+    setTasks((prev) => {
+      const hasNow = prev.some((t) => t.status === 'NOW');
+      assignedStatus = preferredStatus || (hasNow ? 'NEXT' : 'NOW');
+      const newTask: Task = {
+        id: 'task-' + Date.now(),
+        dayPlanDate: getTodayDateStr(),
+        title: title.trim(),
+        status: assignedStatus,
+        displayOrder: prev.length,
+        elapsedFocusSeconds: 0,
+        createdAt: new Date().toISOString(),
+      };
+      return [...prev, newTask];
+    });
     haptics.hapticPop(320);
 
     setTimeline((prev) => [
       {
         id: 'evt-' + Date.now(),
         dayPlanDate: getTodayDateStr(),
-        taskId: newTask.id,
         eventType: 'TASK_START',
-        summary: `Created task “${newTask.title}”`,
+        summary: `Created task “${title.trim()}”`,
         timestamp: new Date().toISOString(),
       },
       ...prev,
@@ -394,6 +320,14 @@ export function useWorkpulseState() {
           },
           ...prev,
         ]);
+        break;
+      }
+      // Dynamic task creation from Gemini or OpenCode CLI
+      case 'task/create' as any: {
+        const payload = (msg as any).payload;
+        if (payload && payload.title) {
+          addTask(payload.title, payload.status);
+        }
         break;
       }
     }

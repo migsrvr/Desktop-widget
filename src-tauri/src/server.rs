@@ -1,7 +1,7 @@
 use axum::{
     extract::ws::{Message, WebSocket, WebSocketUpgrade},
     response::{IntoResponse, Json},
-    routing::get,
+    routing::{get, post},
     Router,
 };
 use futures_util::{SinkExt, StreamExt};
@@ -27,6 +27,8 @@ pub async fn start_server(port: u16) -> Result<(), Box<dyn std::error::Error + S
     let app = Router::new()
         .route("/health", get(health_handler))
         .route("/ws", get(ws_handler))
+        .route("/api/ai/event", post(ai_event_handler))
+        .route("/api/task", post(task_event_handler))
         .layer(cors)
         .with_state(state);
 
@@ -44,8 +46,30 @@ async fn health_handler() -> impl IntoResponse {
         "status": "ok",
         "app": "WorkPulse",
         "version": "0.1.0",
-        "ws_url": "ws://127.0.0.1:41789/ws"
+        "ws_url": "ws://127.0.0.1:41789/ws",
+        "endpoints": {
+            "ai_event": "POST /api/ai/event",
+            "task": "POST /api/task"
+        }
     }))
+}
+
+async fn ai_event_handler(
+    axum::extract::State(state): axum::extract::State<Arc<ServerState>>,
+    axum::Json(payload): axum::Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let text = payload.to_string();
+    let _ = state.tx.send(text);
+    Json(json!({ "status": "ok", "delivered": true }))
+}
+
+async fn task_event_handler(
+    axum::extract::State(state): axum::extract::State<Arc<ServerState>>,
+    axum::Json(payload): axum::Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let text = payload.to_string();
+    let _ = state.tx.send(text);
+    Json(json!({ "status": "ok", "delivered": true }))
 }
 
 async fn ws_handler(
