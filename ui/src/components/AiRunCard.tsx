@@ -3,7 +3,7 @@ import {
   Sparkles,
   Clock,
   FileCode2,
-  CheckCircle,
+  CheckCircle2,
   AlertTriangle,
   XCircle,
   ShieldAlert,
@@ -41,38 +41,65 @@ export const AiRunCard: React.FC<AiRunCardProps> = ({ aiRun, onApprove }) => {
   if (!aiRun) {
     return (
       <div
+        className="w11-card"
         style={{
-          padding: '10px 12px',
-          borderRadius: 'var(--radius-md)',
-          backgroundColor: 'var(--bg-surface)',
-          border: '1px dashed var(--border-subtle)',
-          color: 'var(--text-muted)',
+          padding: '12px 14px',
           display: 'flex',
           alignItems: 'center',
-          gap: 8,
+          gap: 10,
+          color: 'var(--text-secondary)',
           fontSize: 12,
         }}
       >
-        <Sparkles size={14} style={{ opacity: 0.5 }} />
-        <span>No active AI agent task in current IDE workspace</span>
+        <div
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 'var(--radius-sm)',
+            backgroundColor: 'rgba(255, 255, 255, 0.06)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--text-tertiary)',
+          }}
+        >
+          <Sparkles size={14} />
+        </div>
+        <span>No active AI task in current workspace</span>
       </div>
     );
   }
 
-  const getStatusBadge = () => {
+  const getStatusPill = () => {
     switch (aiRun.status) {
       case 'WORKING':
       case 'PLANNING':
       case 'RUNNING_TOOLS':
         return (
-          <span className="badge badge-working">
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '3px 8px',
+              borderRadius: 'var(--radius-pill)',
+              backgroundColor: 'rgba(100, 210, 255, 0.14)',
+              border: '1px solid rgba(100, 210, 255, 0.28)',
+              color: 'var(--apple-cyan)',
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.4px',
+              textTransform: 'uppercase',
+            }}
+          >
             <span
               className="animate-pulse-glow"
               style={{
                 width: 6,
                 height: 6,
                 borderRadius: '50%',
-                backgroundColor: 'currentColor',
+                backgroundColor: 'var(--apple-cyan)',
+                display: 'inline-block',
               }}
             />
             {aiRun.status.replace('_', ' ')}
@@ -80,113 +107,130 @@ export const AiRunCard: React.FC<AiRunCardProps> = ({ aiRun, onApprove }) => {
         );
       case 'WAITING_INPUT':
         return (
-          <span className="badge badge-waiting">
-            <ShieldAlert size={11} />
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '3px 8px',
+              borderRadius: 'var(--radius-pill)',
+              backgroundColor: 'rgba(255, 159, 10, 0.18)',
+              border: '1px solid rgba(255, 159, 10, 0.35)',
+              color: 'var(--apple-amber)',
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.4px',
+              textTransform: 'uppercase',
+            }}
+          >
+            <span
+              className="animate-urgent-blink"
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                backgroundColor: 'var(--apple-amber)',
+                display: 'inline-block',
+              }}
+            />
             Waiting for approval
           </span>
         );
       case 'COMPLETED':
         return (
-          <span className="badge badge-done">
-            <CheckCircle size={11} />
-            Completed
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '3px 8px',
+              borderRadius: 'var(--radius-pill)',
+              backgroundColor: 'rgba(48, 209, 88, 0.14)',
+              border: '1px solid rgba(48, 209, 88, 0.28)',
+              color: 'var(--apple-emerald)',
+              fontSize: 10,
+              fontWeight: 700,
+            }}
+          >
+            <CheckCircle2 size={11} /> Done
           </span>
         );
       case 'FAILED':
         return (
-          <span className="badge badge-error">
-            <XCircle size={11} />
-            Failed
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '3px 8px',
+              borderRadius: 'var(--radius-pill)',
+              backgroundColor: 'rgba(255, 69, 58, 0.16)',
+              border: '1px solid rgba(255, 69, 58, 0.32)',
+              color: 'var(--apple-rose)',
+              fontSize: 10,
+              fontWeight: 700,
+            }}
+          >
+            <XCircle size={11} /> Error
           </span>
         );
       default:
-        return <span className="badge">{aiRun.status}</span>;
+        return (
+          <span
+            style={{
+              display: 'inline-flex',
+              padding: '2px 6px',
+              borderRadius: 'var(--radius-pill)',
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              fontSize: 10,
+              fontWeight: 600,
+            }}
+          >
+            {aiRun.status}
+          </span>
+        );
     }
-  };
-
-  const getTestBadge = () => {
-    if (aiRun.testStatus === 'NOT_RUN') return null;
-    if (aiRun.testStatus === 'RUNNING') {
-      return (
-        <span
-          style={{
-            fontSize: 10,
-            padding: '2px 6px',
-            borderRadius: 'var(--radius-sm)',
-            backgroundColor: 'rgba(56, 189, 248, 0.12)',
-            color: 'var(--accent-cyan)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-          }}
-        >
-          Tests running...
-        </span>
-      );
-    }
-    if (aiRun.testStatus === 'PASSED') {
-      return (
-        <span
-          style={{
-            fontSize: 10,
-            padding: '2px 6px',
-            borderRadius: 'var(--radius-sm)',
-            backgroundColor: 'rgba(16, 185, 129, 0.15)',
-            color: 'var(--accent-emerald)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-          }}
-        >
-          <CheckCircle size={10} /> Tests passed
-        </span>
-      );
-    }
-    return (
-      <span
-        style={{
-          fontSize: 10,
-          padding: '2px 6px',
-          borderRadius: 'var(--radius-sm)',
-          backgroundColor: 'rgba(244, 63, 94, 0.15)',
-          color: 'var(--accent-rose)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
-        }}
-      >
-        <AlertTriangle size={10} /> Tests failed
-      </span>
-    );
   };
 
   return (
     <div
+      className="w11-card"
       style={{
-        borderRadius: 'var(--radius-md)',
-        backgroundColor: 'var(--bg-surface)',
-        border: '1px solid var(--border-subtle)',
-        padding: '12px',
+        padding: '12px 14px',
         display: 'flex',
         flexDirection: 'column',
         gap: 8,
       }}
     >
-      {/* Top Header Row */}
+      {/* Header Row: Agent Model & Dynamic Status */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Sparkles size={13} style={{ color: 'var(--accent-cyan)' }} />
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <div
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(10, 132, 255, 0.18)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--apple-cyan)',
+            }}
+          >
+            <Sparkles size={12} />
+          </div>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>
             AI · {aiRun.agentName}
           </span>
         </div>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {getStatusBadge()}
+          {getStatusPill()}
           <span
             style={{
+              fontFamily: 'JetBrains Mono, SF Mono, monospace',
               fontSize: 11,
-              fontFamily: 'JetBrains Mono, monospace',
-              color: 'var(--text-muted)',
+              color: 'var(--text-tertiary)',
               display: 'flex',
               alignItems: 'center',
               gap: 3,
@@ -197,38 +241,37 @@ export const AiRunCard: React.FC<AiRunCardProps> = ({ aiRun, onApprove }) => {
         </div>
       </div>
 
-      {/* Current Step Description */}
+      {/* Description / Live Step */}
       <div
         style={{
           fontSize: 12,
           fontWeight: 500,
-          color: 'var(--text-main)',
+          color: 'var(--text-primary)',
           lineHeight: 1.4,
         }}
       >
         {aiRun.currentStepDescription || 'Executing workflow...'}
       </div>
 
-      {/* Discretized Step Progress (Honest Progress Bar) */}
+      {/* Honest Progress Capsule */}
       {aiRun.totalSteps && aiRun.totalSteps > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <div
             style={{
               display: 'flex',
               justifyContent: 'space-between',
               fontSize: 10,
-              color: 'var(--text-muted)',
+              fontWeight: 600,
+              color: 'var(--text-tertiary)',
             }}
           >
-            <span>
-              Step {aiRun.currentStep || 1} of {aiRun.totalSteps}
-            </span>
+            <span>Step {aiRun.currentStep || 1} of {aiRun.totalSteps}</span>
             <span>{Math.round(((aiRun.currentStep || 1) / aiRun.totalSteps) * 100)}%</span>
           </div>
           <div
             style={{
               height: 4,
-              borderRadius: 'var(--radius-full)',
+              borderRadius: 'var(--radius-pill)',
               backgroundColor: 'rgba(255, 255, 255, 0.08)',
               overflow: 'hidden',
             }}
@@ -237,30 +280,30 @@ export const AiRunCard: React.FC<AiRunCardProps> = ({ aiRun, onApprove }) => {
               style={{
                 height: '100%',
                 width: `${Math.min(100, Math.round(((aiRun.currentStep || 1) / aiRun.totalSteps) * 100))}%`,
-                background: 'linear-gradient(90deg, var(--accent-cyan), var(--accent-purple))',
-                borderRadius: 'var(--radius-full)',
-                transition: 'width 0.3s ease',
+                background: 'linear-gradient(90deg, var(--apple-cyan), var(--apple-blue))',
+                borderRadius: 'var(--radius-pill)',
+                transition: 'width 0.35s ease',
               }}
             />
           </div>
         </div>
       )}
 
-      {/* Secondary Meta Row: Files Changed & Tests */}
+      {/* Footer Row: Files Changed & Apple Approve Action */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          paddingTop: 4,
-          borderTop: '1px solid rgba(255, 255, 255, 0.04)',
+          paddingTop: 6,
+          borderTop: '1px solid rgba(255, 255, 255, 0.05)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span
             style={{
               fontSize: 11,
-              color: 'var(--text-muted)',
+              color: 'var(--text-secondary)',
               display: 'flex',
               alignItems: 'center',
               gap: 4,
@@ -269,18 +312,47 @@ export const AiRunCard: React.FC<AiRunCardProps> = ({ aiRun, onApprove }) => {
             <FileCode2 size={12} />
             {aiRun.filesModifiedCount} files changed
           </span>
-          {getTestBadge()}
+
+          {aiRun.testStatus === 'PASSED' && (
+            <span
+              style={{
+                fontSize: 10,
+                color: 'var(--apple-emerald)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 3,
+                fontWeight: 600,
+              }}
+            >
+              <CheckCircle2 size={11} /> Tests passed
+            </span>
+          )}
+          {aiRun.testStatus === 'FAILED' && (
+            <span
+              style={{
+                fontSize: 10,
+                color: 'var(--apple-rose)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 3,
+                fontWeight: 600,
+              }}
+            >
+              <AlertTriangle size={11} /> Tests failed
+            </span>
+          )}
         </div>
 
         {aiRun.status === 'WAITING_INPUT' && onApprove && (
           <button
             onClick={onApprove}
-            className="btn-pill"
+            className="apple-btn-primary"
             style={{
-              backgroundColor: 'var(--accent-amber)',
+              background: 'linear-gradient(180deg, var(--apple-amber) 0%, #D97706 100%)',
               color: '#000',
               fontWeight: 700,
               fontSize: 10,
+              padding: '3px 10px',
             }}
           >
             Approve <ArrowRight size={10} />

@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import {
-  CheckCircle2,
-  Circle,
+  Check,
   Plus,
   Trash2,
-  Radio,
   ChevronRight,
   ChevronDown,
 } from 'lucide-react';
@@ -54,26 +52,31 @@ export const TaskList: React.FC<TaskListProps> = ({
           justifyContent: 'space-between',
           padding: '6px 8px',
           borderRadius: 'var(--radius-sm)',
-          backgroundColor: isNow ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
-          border: isNow ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent',
+          backgroundColor: isNow ? 'rgba(10, 132, 255, 0.10)' : 'transparent',
+          border: isNow ? '1px solid rgba(10, 132, 255, 0.28)' : '1px solid transparent',
           transition: 'all 0.15s ease',
-          gap: 8,
+          gap: 9,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-          {/* Status Checkbox */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0 }}>
+          {/* Apple Reminders Style Circular Checkbox */}
           <button
             onClick={() => onUpdateStatus(task.id, isDone ? 'NEXT' : 'DONE')}
-            style={{ color: isDone ? 'var(--accent-emerald)' : 'var(--text-dim)', padding: 0 }}
+            className={`apple-checkbox ${isDone ? 'checked' : isNow ? 'active-now' : ''}`}
             title={isDone ? 'Mark uncompleted' : 'Mark completed'}
           >
             {isDone ? (
-              <CheckCircle2 size={15} />
+              <Check size={11} strokeWidth={3} color="#ffffff" />
             ) : isNow ? (
-              <Radio size={15} style={{ color: 'var(--accent-cyan)' }} />
-            ) : (
-              <Circle size={15} />
-            )}
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--apple-blue)',
+                }}
+              />
+            ) : null}
           </button>
 
           {/* Task Title */}
@@ -82,7 +85,7 @@ export const TaskList: React.FC<TaskListProps> = ({
             style={{
               fontSize: 12,
               fontWeight: isNow ? 600 : 400,
-              color: isDone ? 'var(--text-dim)' : 'var(--text-main)',
+              color: isDone ? 'var(--text-tertiary)' : 'var(--text-primary)',
               textDecoration: isDone ? 'line-through' : 'none',
               cursor: isDone ? 'default' : 'pointer',
               whiteSpace: 'nowrap',
@@ -96,22 +99,22 @@ export const TaskList: React.FC<TaskListProps> = ({
           </span>
         </div>
 
-        {/* Task Actions */}
+        {/* Apple Icon Action Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           {!isNow && !isDone && (
             <button
               onClick={() => onSelectActive(task.id)}
-              className="btn-icon"
-              style={{ width: 20, height: 20, fontSize: 10 }}
+              className="apple-icon-btn"
+              style={{ width: 22, height: 22, fontSize: 10 }}
               title="Set as current active task"
             >
-              <Radio size={11} />
+              <span style={{ fontSize: 9, fontWeight: 700 }}>NOW</span>
             </button>
           )}
           <button
             onClick={() => onDeleteTask(task.id)}
-            className="btn-icon"
-            style={{ width: 20, height: 20, color: 'var(--text-dim)' }}
+            className="apple-icon-btn"
+            style={{ width: 22, height: 22, color: 'var(--text-tertiary)' }}
             title="Delete task"
           >
             <Trash2 size={11} />
@@ -122,46 +125,48 @@ export const TaskList: React.FC<TaskListProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {/* Inline Add Task Input */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* Apple-Style Glass Input Bar */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: 6,
-          padding: '4px 8px',
-          borderRadius: 'var(--radius-sm)',
-          backgroundColor: 'var(--bg-surface)',
-          border: '1px solid var(--border-subtle)',
+          padding: '5px 10px',
+          borderRadius: 'var(--radius-pill)',
+          backgroundColor: 'rgba(0, 0, 0, 0.28)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
         }}
       >
-        <Plus size={13} style={{ color: 'var(--text-dim)' }} />
+        <Plus size={13} style={{ color: 'var(--text-tertiary)' }} />
         <input
           type="text"
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Add task for today... (Press Enter)"
+          placeholder="Add task for today... (Enter)"
           style={{
             flex: 1,
             background: 'transparent',
             border: 'none',
             outline: 'none',
-            color: 'var(--text-main)',
+            color: 'var(--text-primary)',
             fontSize: 12,
+            fontFamily: 'inherit',
           }}
         />
         <select
           value={selectedBucket}
           onChange={(e) => setSelectedBucket(e.target.value as TaskStatus)}
           style={{
-            background: 'var(--bg-surface-hover)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-sm)',
-            color: 'var(--text-muted)',
+            background: 'rgba(255, 255, 255, 0.08)',
+            border: '1px solid rgba(255, 255, 255, 0.10)',
+            borderRadius: 'var(--radius-pill)',
+            color: 'var(--text-secondary)',
             fontSize: 10,
-            padding: '2px 4px',
+            padding: '2px 8px',
             outline: 'none',
+            cursor: 'pointer',
           }}
         >
           <option value="NOW">Now</option>
@@ -171,7 +176,7 @@ export const TaskList: React.FC<TaskListProps> = ({
       </div>
 
       {/* Task Buckets */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 180, overflowY: 'auto' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 180, overflowY: 'auto' }}>
         {/* NOW Task */}
         {nowTask && (
           <div>
@@ -179,10 +184,11 @@ export const TaskList: React.FC<TaskListProps> = ({
               style={{
                 fontSize: 10,
                 fontWeight: 700,
-                color: 'var(--accent-cyan)',
+                color: 'var(--apple-blue)',
                 textTransform: 'uppercase',
-                letterSpacing: 0.5,
+                letterSpacing: 0.6,
                 marginBottom: 3,
+                paddingLeft: 4,
               }}
             >
               Current Active Task
@@ -198,10 +204,11 @@ export const TaskList: React.FC<TaskListProps> = ({
               style={{
                 fontSize: 10,
                 fontWeight: 700,
-                color: 'var(--text-muted)',
+                color: 'var(--text-secondary)',
                 textTransform: 'uppercase',
-                letterSpacing: 0.5,
+                letterSpacing: 0.6,
                 marginBottom: 3,
+                paddingLeft: 4,
               }}
             >
               Next Up ({nextTasks.length})
@@ -219,13 +226,14 @@ export const TaskList: React.FC<TaskListProps> = ({
               style={{
                 fontSize: 10,
                 fontWeight: 700,
-                color: 'var(--text-dim)',
+                color: 'var(--text-tertiary)',
                 textTransform: 'uppercase',
-                letterSpacing: 0.5,
+                letterSpacing: 0.6,
                 marginBottom: 3,
+                paddingLeft: 4,
               }}
             >
-              Later Today ({laterTasks.length})
+              Later ({laterTasks.length})
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {laterTasks.map(renderTaskItem)}
@@ -233,7 +241,7 @@ export const TaskList: React.FC<TaskListProps> = ({
           </div>
         )}
 
-        {/* DONE Tasks */}
+        {/* COMPLETED Tasks */}
         {doneTasks.length > 0 && (
           <div>
             <div
@@ -241,10 +249,11 @@ export const TaskList: React.FC<TaskListProps> = ({
               style={{
                 fontSize: 10,
                 fontWeight: 700,
-                color: 'var(--accent-emerald)',
+                color: 'var(--apple-emerald)',
                 textTransform: 'uppercase',
-                letterSpacing: 0.5,
+                letterSpacing: 0.6,
                 marginBottom: 3,
+                paddingLeft: 4,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',

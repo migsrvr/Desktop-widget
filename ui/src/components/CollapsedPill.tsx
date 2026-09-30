@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, Maximize2, Sparkles, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Play, Pause, Maximize2, Sparkles, CheckCircle2 } from 'lucide-react';
 import { Task, AiRun } from '@workpulse/shared';
 
 interface CollapsedPillProps {
@@ -42,8 +42,8 @@ export const CollapsedPill: React.FC<CollapsedPillProps> = ({
               width: 8,
               height: 8,
               borderRadius: '50%',
-              backgroundColor: 'var(--accent-cyan)',
-              color: 'var(--accent-cyan)',
+              backgroundColor: 'var(--apple-cyan)',
+              color: 'var(--apple-cyan)',
               display: 'inline-block',
             }}
             title={`AI: ${aiRun.status}`}
@@ -57,7 +57,7 @@ export const CollapsedPill: React.FC<CollapsedPillProps> = ({
               width: 9,
               height: 9,
               borderRadius: '50%',
-              backgroundColor: 'var(--accent-amber)',
+              backgroundColor: 'var(--apple-amber)',
               display: 'inline-block',
             }}
             title="AI Waiting for your approval!"
@@ -68,7 +68,7 @@ export const CollapsedPill: React.FC<CollapsedPillProps> = ({
           <span title="AI Run Completed" style={{ display: 'inline-flex' }}>
             <CheckCircle2
               size={12}
-              style={{ color: 'var(--accent-emerald)' }}
+              style={{ color: 'var(--apple-emerald)' }}
             />
           </span>
         );
@@ -79,7 +79,7 @@ export const CollapsedPill: React.FC<CollapsedPillProps> = ({
               width: 7,
               height: 7,
               borderRadius: '50%',
-              backgroundColor: 'var(--text-dim)',
+              backgroundColor: 'var(--text-tertiary)',
               display: 'inline-block',
             }}
           />
@@ -90,27 +90,31 @@ export const CollapsedPill: React.FC<CollapsedPillProps> = ({
   return (
     <div
       onClick={onExpand}
-      className="acrylic-card titlebar-drag-region"
+      className="titlebar-drag-region"
       style={{
         display: 'inline-flex',
         alignItems: 'center',
         gap: 10,
         padding: '6px 12px 6px 10px',
-        borderRadius: 'var(--radius-full)',
+        borderRadius: 'var(--radius-pill)',
         cursor: 'pointer',
-        boxShadow: 'var(--shadow-acrylic)',
-        border: '1px solid var(--border-subtle)',
-        maxWidth: 320,
+        backgroundColor: 'rgba(18, 18, 22, 0.90)',
+        backdropFilter: 'blur(40px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+        border: '1px solid rgba(255, 255, 255, 0.12)',
+        boxShadow: '0 16px 36px -6px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.15)',
+        maxWidth: 340,
+        transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
       }}
     >
-      {/* AI Pulse Dot */}
+      {/* Apple Dynamic Island Live Indicator Orb */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {getAiIndicator() || (
-          <Sparkles size={13} style={{ color: 'var(--accent-cyan)', opacity: 0.8 }} />
+          <Sparkles size={13} style={{ color: 'var(--apple-blue)', opacity: 0.9 }} />
         )}
       </div>
 
-      {/* Current Task Snippet */}
+      {/* Current Task Title */}
       <div
         style={{
           display: 'flex',
@@ -126,29 +130,29 @@ export const CollapsedPill: React.FC<CollapsedPillProps> = ({
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            color: 'var(--text-main)',
+            color: '#ffffff',
           }}
         >
           {activeTask ? activeTask.title : 'No active task'}
         </span>
       </div>
 
-      {/* Progress count e.g. 2 / 5 */}
+      {/* Progress Capsule Badge e.g. 2 / 5 */}
       <div
         style={{
           fontSize: 10,
           fontWeight: 700,
-          color: 'var(--accent-cyan)',
-          backgroundColor: 'rgba(56, 189, 248, 0.1)',
-          padding: '2px 6px',
-          borderRadius: 'var(--radius-full)',
-          border: '1px solid rgba(56, 189, 248, 0.25)',
+          color: 'var(--apple-blue)',
+          backgroundColor: 'rgba(10, 132, 255, 0.14)',
+          padding: '2px 7px',
+          borderRadius: 'var(--radius-pill)',
+          border: '1px solid rgba(10, 132, 255, 0.28)',
         }}
       >
         {doneCount}/{tasksCount}
       </div>
 
-      {/* Focus Timer */}
+      {/* Focus Timer Capsule */}
       <div
         onClick={onToggleTimer}
         className="non-drag"
@@ -157,23 +161,24 @@ export const CollapsedPill: React.FC<CollapsedPillProps> = ({
           alignItems: 'center',
           gap: 4,
           fontSize: 11,
-          fontFamily: 'JetBrains Mono, monospace',
-          color: 'var(--text-muted)',
-          padding: '2px 6px',
-          borderRadius: 'var(--radius-sm)',
-          backgroundColor: 'var(--bg-surface)',
+          fontFamily: 'JetBrains Mono, SF Mono, monospace',
+          color: isTimerRunning ? '#ffffff' : 'var(--text-secondary)',
+          padding: '3px 7px',
+          borderRadius: 'var(--radius-pill)',
+          backgroundColor: isTimerRunning ? 'rgba(10, 132, 255, 0.25)' : 'rgba(255, 255, 255, 0.08)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
         }}
         title="Toggle focus timer"
       >
-        {isTimerRunning ? <Pause size={10} /> : <Play size={10} />}
+        {isTimerRunning ? <Pause size={9} fill="currentColor" /> : <Play size={9} fill="currentColor" />}
         <span>{formatTime(focusSeconds)}</span>
       </div>
 
-      {/* Expand Icon */}
+      {/* Apple-style Expand icon */}
       <button
         onClick={onExpand}
-        className="btn-icon non-drag"
-        style={{ width: 20, height: 20, padding: 0 }}
+        className="apple-icon-btn non-drag"
+        style={{ width: 20, height: 20, padding: 0, border: 'none', background: 'transparent' }}
         title="Expand panel"
       >
         <Maximize2 size={11} />

@@ -1,34 +1,55 @@
 :root {
-  --bg-primary: rgba(13, 17, 23, 0.88);
-  --bg-surface: rgba(22, 27, 34, 0.72);
-  --bg-surface-hover: rgba(33, 38, 45, 0.85);
-  --bg-surface-active: rgba(48, 54, 61, 0.95);
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-highlight: rgba(255, 255, 255, 0.16);
-  --border-focus: rgba(56, 189, 248, 0.5);
+  /* Windows 11 Mica & Acrylic Palette */
+  --w11-bg-acrylic: rgba(26, 26, 28, 0.82);
+  --w11-card: rgba(36, 36, 40, 0.68);
+  --w11-card-hover: rgba(48, 48, 54, 0.78);
+  --w11-card-active: rgba(56, 56, 64, 0.90);
+  --w11-subcard: rgba(22, 22, 24, 0.50);
+  
+  --w11-border: rgba(255, 255, 255, 0.08);
+  --w11-border-subtle: rgba(255, 255, 255, 0.04);
+  --w11-border-highlight: rgba(255, 255, 255, 0.15);
+  --w11-border-card: rgba(255, 255, 255, 0.07);
 
-  --text-main: #f0f6fc;
-  --text-muted: #8b949e;
-  --text-dim: #6e7681;
+  /* Apple SF Typography & Accent Colors */
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.68);
+  --text-tertiary: rgba(255, 255, 255, 0.42);
 
-  --accent-cyan: #38bdf8;
-  --accent-cyan-glow: rgba(56, 189, 248, 0.35);
-  --accent-purple: #a855f7;
-  --accent-emerald: #10b981;
-  --accent-emerald-glow: rgba(16, 185, 129, 0.35);
-  --accent-amber: #f59e0b;
-  --accent-amber-glow: rgba(245, 158, 11, 0.4);
-  --accent-rose: #f43f5e;
+  --apple-blue: #0A84FF;
+  --apple-blue-hover: #0077ED;
+  --apple-blue-glow: rgba(10, 132, 255, 0.35);
+  
+  --apple-cyan: #64D2FF;
+  --apple-cyan-glow: rgba(100, 210, 255, 0.35);
+  
+  --apple-emerald: #30D158;
+  --apple-emerald-glow: rgba(48, 209, 88, 0.35);
+  
+  --apple-amber: #FF9F0A;
+  --apple-amber-glow: rgba(255, 159, 10, 0.40);
+  
+  --apple-rose: #FF453A;
+  --apple-purple: #BF5AF2;
 
-  --radius-sm: 6px;
+  /* Apple & Windows 11 Radii */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
   --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-full: 9999px;
+  --radius-lg: 14px;
+  --radius-pill: 9999px;
 
-  --shadow-acrylic: 0 12px 36px -6px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--border-subtle);
-  --shadow-glow: 0 0 20px -2px var(--accent-cyan-glow);
+  /* Shadows */
+  --shadow-w11-flyout: 
+    0 24px 54px -12px rgba(0, 0, 0, 0.75),
+    0 0 0 1px var(--w11-border),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
 
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --shadow-apple-btn:
+    0 2px 6px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI Variable Display', 'Segoe UI', Roboto, sans-serif;
   color-scheme: dark;
 }
 
@@ -44,38 +65,50 @@ html, body {
   height: 100%;
   overflow: hidden;
   background-color: transparent !important;
-  color: var(--text-main);
+  color: var(--text-primary);
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Minimal Scrollbar */
+/* Custom Minimal Windows 11 Scrollbar */
 ::-webkit-scrollbar {
-  width: 5px;
+  width: 4px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-pill);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.28);
 }
 
-/* Glassmorphism Containers */
-.acrylic-card {
-  background: var(--bg-primary);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-acrylic);
+/* Windows 11 Mica & Acrylic Outer Shell */
+.w11-acrylic-panel {
+  background: var(--w11-bg-acrylic);
+  backdrop-filter: blur(48px) saturate(180%);
+  -webkit-backdrop-filter: blur(48px) saturate(180%);
+  border: 1px solid var(--w11-border);
+  box-shadow: var(--shadow-w11-flyout);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Nested Windows 11 Section Card */
+.w11-card {
+  background: var(--w11-card);
+  border: 1px solid var(--w11-border-card);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.acrylic-card:hover {
-  border-color: var(--border-highlight);
+.w11-card:hover {
+  border-color: var(--w11-border-highlight);
 }
 
 /* Window Drag Regions */
@@ -87,118 +120,200 @@ html, body {
   -webkit-app-region: no-drag;
 }
 
+/* -------------------------------------------------------------------------
+   Apple-Style Buttons & Controls
+   ------------------------------------------------------------------------- */
+button {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  font-family: inherit;
+  transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), background 0.15s ease, opacity 0.15s ease;
+}
+
+button:active {
+  transform: scale(0.95);
+}
+
+/* Apple Circular Glass Icon Button */
+.apple-icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.20);
+  color: #ffffff;
+}
+
+.apple-icon-btn:active {
+  transform: scale(0.92);
+}
+
+/* Apple Primary Action Pill (e.g. Focus button) */
+.apple-btn-primary {
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.09) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  letter-spacing: -0.1px;
+}
+
+.apple-btn-primary:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.14) 100%);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.apple-btn-primary:active {
+  transform: scale(0.95);
+}
+
+/* Apple Focus Active State */
+.apple-btn-focus-active {
+  background: linear-gradient(180deg, var(--apple-blue) 0%, #0066d6 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 0 16px var(--apple-blue-glow) !important;
+}
+
+/* Apple Stepper Button (like in the Windows 11 calendar screenshot: [-] 30 mins [+]) */
+.apple-stepper-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.apple-stepper-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.apple-stepper-btn:active {
+  transform: scale(0.92);
+}
+
+/* Apple Segmented Control (Pill switch) */
+.apple-segmented-container {
+  display: flex;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  gap: 2px;
+}
+
+.apple-segmented-item {
+  flex: 1;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-segmented-item:hover {
+  color: #ffffff;
+}
+
+.apple-segmented-item.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+/* Apple Reminders-Style Circular Checkbox */
+.apple-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+.apple-checkbox:hover {
+  border-color: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.apple-checkbox.checked {
+  background: var(--apple-emerald);
+  border-color: var(--apple-emerald);
+  box-shadow: 0 0 10px var(--apple-emerald-glow);
+}
+
+.apple-checkbox.active-now {
+  border-color: var(--apple-blue);
+  box-shadow: 0 0 8px var(--apple-blue-glow);
+}
+
 /* Micro-animations */
-@keyframes pulseGlow {
+@keyframes breathingPulse {
   0%, 100% {
     transform: scale(1);
     opacity: 0.85;
     box-shadow: 0 0 8px currentColor;
   }
   50% {
-    transform: scale(1.18);
+    transform: scale(1.15);
     opacity: 1;
     box-shadow: 0 0 16px currentColor;
   }
 }
 
-@keyframes urgentBlink {
+@keyframes amberUrgent {
   0%, 100% {
     opacity: 1;
-    box-shadow: 0 0 12px var(--accent-amber);
+    box-shadow: 0 0 14px var(--apple-amber);
   }
   50% {
-    opacity: 0.3;
-    box-shadow: 0 0 2px var(--accent-amber);
+    opacity: 0.35;
+    box-shadow: 0 0 3px var(--apple-amber);
   }
 }
 
 .animate-pulse-glow {
-  animation: pulseGlow 2.4s infinite ease-in-out;
+  animation: breathingPulse 2.2s infinite ease-in-out;
 }
 
 .animate-urgent-blink {
-  animation: urgentBlink 1s infinite ease-in-out;
-}
-
-/* Buttons and Interactive Elements */
-button {
-  background: transparent;
-  border: none;
-  color: var(--text-main);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
-  outline: none;
-}
-
-button:hover {
-  filter: brightness(1.2);
-}
-
-button:active {
-  transform: scale(0.96);
-}
-
-.btn-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-}
-.btn-icon:hover {
-  background: var(--bg-surface-hover);
-  color: var(--text-main);
-}
-
-.btn-pill {
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  font-size: 11px;
-  font-weight: 600;
-  gap: 5px;
-}
-.btn-pill:hover {
-  background: var(--bg-surface-hover);
-  border-color: var(--border-highlight);
-}
-
-/* Status Badges */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 7px;
-  border-radius: var(--radius-full);
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.badge-working {
-  background: rgba(56, 189, 248, 0.15);
-  color: var(--accent-cyan);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-}
-
-.badge-waiting {
-  background: rgba(245, 158, 11, 0.18);
-  color: var(--accent-amber);
-  border: 1px solid rgba(245, 158, 11, 0.45);
-}
-
-.badge-done {
-  background: rgba(16, 185, 129, 0.15);
-  color: var(--accent-emerald);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.badge-error {
-  background: rgba(244, 63, 94, 0.18);
-  color: var(--accent-rose);
-  border: 1px solid rgba(244, 63, 94, 0.4);
+  animation: amberUrgent 0.9s infinite ease-in-out;
 }

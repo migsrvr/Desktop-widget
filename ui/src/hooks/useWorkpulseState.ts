@@ -136,6 +136,15 @@ export function useWorkpulseState() {
   // Focus Timer State
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(true);
   const [focusSeconds, setFocusSeconds] = useState<number>(522);
+  const [targetMinutes, setTargetMinutes] = useState<number>(30);
+
+  const adjustTargetMinutes = useCallback((delta: number) => {
+    setTargetMinutes((prev) => {
+      const next = Math.max(5, Math.min(180, prev + delta));
+      haptics.snapClick();
+      return next;
+    });
+  }, []);
 
   // Save tasks to local storage
   useEffect(() => {
@@ -401,6 +410,8 @@ export function useWorkpulseState() {
     isMuted,
     isTimerRunning,
     focusSeconds,
+    targetMinutes,
+    adjustTargetMinutes,
     addTask,
     setActiveTask,
     updateTaskStatus,

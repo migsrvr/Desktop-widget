@@ -3,7 +3,7 @@ import { useWorkpulseState } from './hooks/useWorkpulseState';
 import { useWebSocketBridge } from './hooks/useWebSocketBridge';
 import { CollapsedPill } from './components/CollapsedPill';
 import { ExpandedPanel } from './components/ExpandedPanel';
-import { Sparkles, Radio } from 'lucide-react';
+import { Play, ShieldAlert, CheckCircle2 } from 'lucide-react';
 
 export const App: React.FC = () => {
   const {
@@ -17,6 +17,8 @@ export const App: React.FC = () => {
     isMuted,
     isTimerRunning,
     focusSeconds,
+    targetMinutes,
+    adjustTargetMinutes,
     addTask,
     setActiveTask,
     updateTaskStatus,
@@ -86,7 +88,7 @@ export const App: React.FC = () => {
         display: 'inline-flex',
         flexDirection: 'column',
         alignItems: 'flex-start',
-        padding: 8,
+        padding: 6,
       }}
     >
       {isExpanded ? (
@@ -100,11 +102,13 @@ export const App: React.FC = () => {
           isMuted={isMuted}
           isTimerRunning={isTimerRunning}
           focusSeconds={focusSeconds}
+          targetMinutes={targetMinutes}
           onCollapse={toggleExpanded}
           onToggleAlwaysOnTop={toggleAlwaysOnTop}
           onToggleMute={toggleMute}
           onToggleTimer={toggleTimer}
           onResetTimer={resetTimer}
+          onAdjustMinutes={adjustTargetMinutes}
           onSelectActiveTask={setActiveTask}
           onUpdateTaskStatus={updateTaskStatus}
           onDeleteTask={deleteTask}
@@ -127,7 +131,7 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* Embedded Telemetry Connection & Dev Simulator Pill */}
+      {/* Embedded Telemetry Connection & Dev Simulator Pill (Apple-Style Glass Capsule) */}
       <div
         style={{
           marginTop: 6,
@@ -135,15 +139,19 @@ export const App: React.FC = () => {
           alignItems: 'center',
           gap: 6,
           fontSize: 10,
-          color: 'var(--text-dim)',
+          color: 'var(--text-tertiary)',
           paddingLeft: 4,
         }}
       >
-        <span
+        <div
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: 4,
+            gap: 5,
+            padding: '2px 8px',
+            borderRadius: 'var(--radius-pill)',
+            backgroundColor: 'rgba(0, 0, 0, 0.25)',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
           }}
           title={isConnected ? 'Connected to local IDE bridge' : 'Waiting for local bridge (127.0.0.1:41789)'}
         >
@@ -152,23 +160,28 @@ export const App: React.FC = () => {
               width: 5,
               height: 5,
               borderRadius: '50%',
-              backgroundColor: isConnected ? 'var(--accent-emerald)' : 'var(--accent-amber)',
+              backgroundColor: isConnected ? 'var(--apple-emerald)' : 'var(--apple-amber)',
+              boxShadow: isConnected ? '0 0 6px var(--apple-emerald)' : 'none',
             }}
           />
-          {isConnected ? 'IDE Connected' : 'Bridge Idle'}
-        </span>
+          <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
+            {isConnected ? 'IDE Connected' : 'Bridge Idle'}
+          </span>
+        </div>
 
         <button
           onClick={() => setShowSimMenu(!showSimMenu)}
           style={{
-            fontSize: 9,
-            color: 'var(--text-muted)',
-            textDecoration: 'underline',
+            fontSize: 10,
+            color: 'var(--text-tertiary)',
+            textDecoration: 'none',
             cursor: 'pointer',
-            padding: 0,
+            padding: '2px 6px',
+            borderRadius: 'var(--radius-pill)',
+            backgroundColor: 'rgba(255, 255, 255, 0.04)',
           }}
         >
-          {showSimMenu ? 'Hide Simulator' : 'Test AI Events'}
+          {showSimMenu ? 'Hide Tests' : 'Simulate AI'}
         </button>
 
         {showSimMenu && (
@@ -176,22 +189,42 @@ export const App: React.FC = () => {
             style={{
               display: 'inline-flex',
               gap: 4,
-              backgroundColor: 'var(--bg-surface)',
+              backgroundColor: 'rgba(0, 0, 0, 0.35)',
               padding: '2px 6px',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-pill)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
             }}
           >
-            <button onClick={handleSimulateAiStart} style={{ fontSize: 9, color: 'var(--accent-cyan)' }}>
-              Start AI
+            <button
+              onClick={handleSimulateAiStart}
+              className="apple-btn-primary"
+              style={{ fontSize: 9, padding: '2px 6px', gap: 3 }}
+            >
+              <Play size={8} fill="currentColor" /> Start
             </button>
-            <span>·</span>
-            <button onClick={handleSimulateAiWaiting} style={{ fontSize: 9, color: 'var(--accent-amber)' }}>
-              Wait Approval
+            <button
+              onClick={handleSimulateAiWaiting}
+              className="apple-btn-primary"
+              style={{
+                fontSize: 9,
+                padding: '2px 6px',
+                gap: 3,
+                color: 'var(--apple-amber)',
+              }}
+            >
+              <ShieldAlert size={8} /> Alert
             </button>
-            <span>·</span>
-            <button onClick={handleSimulateAiDone} style={{ fontSize: 9, color: 'var(--accent-emerald)' }}>
-              Done
+            <button
+              onClick={handleSimulateAiDone}
+              className="apple-btn-primary"
+              style={{
+                fontSize: 9,
+                padding: '2px 6px',
+                gap: 3,
+                color: 'var(--apple-emerald)',
+              }}
+            >
+              <CheckCircle2 size={8} /> Done
             </button>
           </div>
         )}
