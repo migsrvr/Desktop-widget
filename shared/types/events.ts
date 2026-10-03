@@ -63,7 +63,11 @@ export type TimelineEventType =
   | 'AI_WAITING'
   | 'FILES_CHANGED'
   | 'TESTS_RUN'
-  | 'GIT_COMMIT';
+  | 'GIT_COMMIT'
+  | 'SCREEN_OBSERVED'
+  | 'VISION_INFERENCE'
+  | 'ACTION_PROPOSED'
+  | 'ACTION_EXECUTED';
 
 export interface TimelineEvent {
   id: string;
@@ -149,6 +153,18 @@ export type IdeToWidgetMessage =
       };
     }
   | {
+      type: 'screen/observed';
+      payload: ScreenFrameMeta;
+    }
+  | {
+      type: 'ai/vision_update';
+      payload: VisionInference;
+    }
+  | {
+      type: 'agent/action_proposed';
+      payload: OperatorActionProposal;
+    }
+  | {
       type: 'spotify/auth_success';
       payload: {
         isConnected: boolean;
@@ -171,7 +187,69 @@ export type WidgetToIdeMessage =
         activeTaskId?: string;
         tasksCount: number;
       };
+    }
+  | {
+      type: 'widget/operator_task';
+      payload: { taskId: string; goal: string; mode: ScreenMode };
+    }
+  | {
+      type: 'agent/action_decided';
+      payload: { actionId: string; decision: 'APPROVED' | 'DENIED' };
     };
+
+// ---------------------------------------------------------------------------
+// Screen-aware OpenClaw Operator Contracts
+// ---------------------------------------------------------------------------
+
+export type ScreenMode = 'ON_DEMAND' | 'MONITOR' | 'OPERATOR';
+
+export type VisionState = 'STUCK' | 'ERROR' | 'DONE' | 'IDLE' | 'PROGRESSING';
+
+export type OperatorTool = 'mouse_move' | 'click' | 'type' | 'hotkey';
+
+export type OperatorActionStatus =
+  | 'PROPOSED'
+  | 'APPROVED'
+  | 'DENIED'
+  | 'EXECUTED'
+  | 'FAILED';
+
+export interface ScreenFrameMeta {
+  frameId: string;
+  sessionId: string;
+  windowTitle?: string;
+  appName?: string;
+  width: number;
+  height: number;
+  hash: string;
+  capturedAt: string; // ISO timestamp
+}
+
+export interface VisionInference {
+  inferenceId: string;
+  frameId: string;
+  provider: string; // 'gemini' | 'openai' | 'mock'
+  state: VisionState;
+  confidence: number; // 0..1
+  summary: string;
+  suggestedAction?: {
+    tool: OperatorTool;
+    args: Record<string, unknown>;
+    rationale: string;
+  };
+  createdAt: string; // ISO timestamp
+}
+
+export interface OperatorActionProposal {
+  actionId: string;
+  inferenceId?: string;
+  taskId?: string;
+  tool: OperatorTool;
+  args: Record<string, unknown>;
+  prompt: string;
+  status: OperatorActionStatus;
+  createdAt: string; // ISO timestamp
+}
 
 // ---------------------------------------------------------------------------
 // Invariant & Helper Utilities
@@ -260,7 +338,7 @@ export function isAiWaitingInput(status: AiRunStatus): boolean {
 // Spotify Web API Integration Contracts
 // ---------------------------------------------------------------------------
 
-export const SPOTIFY_REDIRECT_URI = 'http://localhost:41789/api/spotify/callback';
+export const SPOTIFY_REDIRECT_URI = 'http://127.0.0.1:41789/api/spotify/callback';
 
 export interface SpotifyDevice {
   id?: string;
@@ -305,4 +383,87 @@ export function formatTrackDuration(ms: number): string {
  */
 export function validateSpotifyAction(action: string): boolean {
   return ['PLAY', 'PAUSE', 'TOGGLE', 'NEXT', 'PREVIOUS'].includes(action);
+}
+
+// ---------------------------------------------------------------------------
+// Screen operator helpers
+// ---------------------------------------------------------------------------
+
+const VISION_STATES: VisionState[] = ['STUCK', 'ERROR', 'DONE', 'IDLE', 'PROGRESSING'];
+const OPERATOR_TOOLS: OperatorTool[] = ['mouse_move', 'click', 'type', 'hotkey'];
+
+/**
+ * Returns true when the vision inference is confident enough to act on.
+ * Default threshold 0.75 per spec — below that we log only, never propose.
+ */
+export function isVisionConfident(inference: VisionInference, threshold = 0.75): boolean {
+  if (!inference || typeof inference.confidence !== 'number') return false;
+  if (!VISION_STATES.includes(inference.state)) return false;
+  if (Number.isNaN(inference.confidence)) return false;
+  return inference.confidence >= threshold;
+}
+
+/**
+ * Validates an operator tool + args pair before proposing/executing.
+ */
+export function validateOperatorAction(
+  tool: string,
+  args: Record<string, unknown> | undefined | null
+): { isValid: boolean; error?: string } {
+  if (!OPERATOR_TOOLS.includes(tool as OperatorTool)) {
+    return { isValid: false, error: `Unknown operator tool: ${tool}` };
+  }
+  const a = args ?? {};
+  switch (tool as OperatorTool) {
+    case 'mouse_move':
+    case 'click': {
+      const x = (a as Record<string, unknown>).x;
+      const y = (a as Record<string, unknown>).y;
+      if (typeof x !== 'number' || typeof y !== 'number') {
+        return { isValid: false, error: `${tool} requires numeric x and y` };
+      }
+      return { isValid: true };
+    }
+    case 'type': {
+      const text = (a as Record<string, unknown>).text;
+      if (typeof text !== 'string' || text.length === 0) {
+        return { isValid: false, error: `type requires non-empty text` };
+      }
+      return { isValid: true };
+    }
+    case 'hotkey': {
+      const keys = (a as Record<string, unknown>).keys;
+      if (typeof keys !== 'string' || keys.length === 0) {
+        return { isValid: false, error: `hotkey requires keys string (e.g. "ctrl+s")` };
+      }
+      return { isValid: true };
+    }
+  }
+  return { isValid: true };
+}
+
+/**
+ * Only PROPOSED actions can be approved/denied. Guards the
+ * PROPOSED -> APPROVED|DENIED -> EXECUTED|FAILED state machine.
+ */
+export function canApproveAction(status: OperatorActionStatus): boolean {
+  return status === 'PROPOSED';
+}
+
+/**
+ * Maps a vision state to the honest AiRunStatus shown in the widget.
+ * STUCK/ERROR surface as WAITING_INPUT (needs human eyes); DONE maps to
+ * WORKING here — completion itself is only marked by explicit task/done events.
+ */
+export function mapVisionToAiStatus(state: VisionState): AiRunStatus {
+  switch (state) {
+    case 'STUCK':
+    case 'ERROR':
+      return 'WAITING_INPUT';
+    case 'DONE':
+    case 'IDLE':
+    case 'PROGRESSING':
+    default:
+      return 'WORKING';
+  }
 }

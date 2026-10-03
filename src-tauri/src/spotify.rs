@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::sync::Mutex;
 
-pub const SPOTIFY_REDIRECT_URI: &str = "http://localhost:41789/api/spotify/callback";
+pub const SPOTIFY_REDIRECT_URI: &str = "http://127.0.0.1:41789/api/spotify/callback";
 
 static PENDING_AUTH: Mutex<Option<PendingAuth>> = Mutex::new(None);
 
