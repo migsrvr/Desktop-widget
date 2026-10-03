@@ -45,6 +45,15 @@ pub struct TimelineEventRecord {
     pub timestamp: String,
 }
 
+#[allow(dead_code)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SpotifyAuthRecord {
+    pub client_id: String,
+    pub access_token: String,
+    pub refresh_token: String,
+    pub expires_at: i64,
+}
+
 pub struct Database {
     db_path: PathBuf,
 }
@@ -105,6 +114,15 @@ impl Database {
                 summary TEXT NOT NULL,
                 metadata_json TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS spotify_auth (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                client_id TEXT NOT NULL,
+                access_token TEXT NOT NULL,
+                refresh_token TEXT NOT NULL,
+                expires_at INTEGER NOT NULL,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             ",
         )?;
@@ -221,5 +239,49 @@ impl Database {
             events.push(evt?);
         }
         Ok(events)
+    }
+
+    #[allow(dead_code)]
+    pub fn save_spotify_auth(&self, auth: &SpotifyAuthRecord) -> Result<()> {
+        let conn = self.get_conn()?;
+        conn.execute(
+            "INSERT INTO spotify_auth (id, client_id, access_token, refresh_token, expires_at, updated_at)
+             VALUES (1, ?1, ?2, ?3, ?4, CURRENT_TIMESTAMP)
+             ON CONFLICT(id) DO UPDATE SET
+                 client_id = excluded.client_id,
+                 access_token = excluded.access_token,
+                 refresh_token = excluded.refresh_token,
+                 expires_at = excluded.expires_at,
+                 updated_at = CURRENT_TIMESTAMP",
+            params![auth.client_id, auth.access_token, auth.refresh_token, auth.expires_at],
+        )?;
+        Ok(())
+    }
+
+    #[allow(dead_code)]
+    pub fn get_spotify_auth(&self) -> Result<Option<SpotifyAuthRecord>> {
+        let conn = self.get_conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT client_id, access_token, refresh_token, expires_at FROM spotify_auth WHERE id = 1",
+        )?;
+
+        let mut rows = stmt.query([])?;
+        if let Some(row) = rows.next()? {
+            Ok(Some(SpotifyAuthRecord {
+                client_id: row.get(0)?,
+                access_token: row.get(1)?,
+                refresh_token: row.get(2)?,
+                expires_at: row.get(3)?,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn delete_spotify_auth(&self) -> Result<()> {
+        let conn = self.get_conn()?;
+        conn.execute("DELETE FROM spotify_auth WHERE id = 1", [])?;
+        Ok(())
     }
 }
