@@ -38,6 +38,9 @@ export const App: React.FC = () => {
     resetTimer,
     handleIncomingIdeMessage,
     spotify,
+    sidePanel,
+    toggleSidePanel,
+    closeSidePanel,
   } = useWorkpulseState();
 
   const [isSpotifyModalOpen, setIsSpotifyModalOpen] = useState(false);
@@ -57,7 +60,10 @@ export const App: React.FC = () => {
   });
 
   // Sticky-note behavior: edge magnet + fling-to-dock top-right.
-  const { dockTopRight, isDocked } = useWindowMagnet(isExpanded);
+  // The layout key also refreshes window metrics when a side flyout opens.
+  const { dockTopRight, isDocked } = useWindowMagnet(
+    `${isExpanded ? 'open' : 'pill'}:${sidePanel ?? 'none'}`
+  );
 
   const [showSimMenu, setShowSimMenu] = useState(false);
 
@@ -175,6 +181,9 @@ export const App: React.FC = () => {
             onClearPastTasks={clearPastCompletedTasks}
             onOpenIde={handleOpenIde}
             isBridgeConnected={isConnected}
+            sidePanel={sidePanel}
+            onToggleSidePanel={toggleSidePanel}
+            onCloseSidePanel={closeSidePanel}
             spotifyTrack={spotify.track}
             isSpotifyConnected={spotify.authStatus.isConnected}
             isSpotifyConnecting={spotify.isConnecting}

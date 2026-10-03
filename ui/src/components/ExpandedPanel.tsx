@@ -37,6 +37,9 @@ interface ExpandedPanelProps {
   onClearPastTasks?: () => void;
   onOpenIde?: () => void;
   isBridgeConnected?: boolean;
+  sidePanel?: 'spotify' | 'operator' | null;
+  onToggleSidePanel?: (panel: 'spotify' | 'operator') => void;
+  onCloseSidePanel?: () => void;
   spotifyTrack?: SpotifyTrack | null;
   isSpotifyConnected?: boolean;
   isSpotifyConnecting?: boolean;
@@ -84,6 +87,9 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   onClearPastTasks,
   onOpenIde,
   isBridgeConnected = false,
+  sidePanel = null,
+  onToggleSidePanel,
+  onCloseSidePanel,
   spotifyTrack,
   isSpotifyConnected,
   isSpotifyConnecting,
@@ -123,19 +129,97 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   const remainingCount =
     typeof propRemainingCount === 'number' ? propRemainingCount : tasks.length - doneCount;
 
+  const showOperator = !!onToggleOperatorWatching && !!operatorMode;
+  const spotifyStatus = !isSpotifyConnected
+    ? 'Connect music'
+    : spotifyTrack
+      ? `${spotifyTrack.isPlaying ? 'Playing' : 'Paused'} · ${spotifyTrack.name}`
+      : 'Ready to play';
+  const operatorModeLabel =
+    operatorMode === 'MONITOR' ? 'Monitor' : operatorMode === 'OPERATOR' ? 'Operator' : operatorMode === 'ON_DEMAND' ? 'On-demand' : 'Paused';
+  const operatorStatus = operatorWatching ? `Watching · ${operatorModeLabel}` : operatorModeLabel;
+
   return (
     <div
-      className="w11-acrylic-panel"
       style={{
-        width: '100%',
-        maxWidth: 400,
-        padding: '16px',
         display: 'flex',
-        flexDirection: 'column',
-        gap: 14,
+        flexDirection: 'row',
+        gap: 8,
+        alignItems: 'flex-start',
+        width: '100%',
         boxSizing: 'border-box',
       }}
     >
+      {/* Left flyout — Spotify / Screen Operator extend width, not length */}
+      {sidePanel && (
+        <div
+          className="w11-acrylic-panel"
+          style={{
+            width: 300,
+            flexShrink: 0,
+            padding: '14px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10,
+            boxSizing: 'border-box',
+            maxHeight: 600,
+            overflowY: 'auto',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.2px', color: '#ffffff' }}>
+              {sidePanel === 'spotify' ? 'Spotify' : 'Screen Operator'}
+            </span>
+            <button
+              onClick={onCloseSidePanel}
+              className="apple-btn-text"
+              style={{ padding: '2px 7px', fontSize: 11 }}
+              title="Close panel"
+            >
+              ✕
+            </button>
+          </div>
+
+          {sidePanel === 'spotify' && onOpenSpotifySetup && onSpotifyControl && (
+            <SpotifyPlayerCard
+              track={spotifyTrack ?? null}
+              isConnected={!!isSpotifyConnected}
+              isConnecting={!!isSpotifyConnecting}
+              onOpenSetup={onOpenSpotifySetup}
+              onControl={onSpotifyControl}
+            />
+          )}
+
+          {sidePanel === 'operator' && (
+            <OperatorCard
+              watching={!!operatorWatching}
+              mode={operatorMode ?? 'MONITOR'}
+              lastFrame={operatorFrame ?? null}
+              inference={operatorInference ?? null}
+              proposal={operatorProposal ?? null}
+              thumbUrl={operatorThumbUrl ?? ''}
+              onToggleWatching={onToggleOperatorWatching ?? (() => {})}
+              onModeChange={onOperatorModeChange ?? (() => {})}
+              onCaptureNow={onOperatorCapture ?? (() => {})}
+              onApprove={onOperatorApprove ?? (() => {})}
+              onDeny={onOperatorDeny ?? (() => {})}
+            />
+          )}
+        </div>
+      )}
+
+      <div
+        className="w11-acrylic-panel"
+        style={{
+          width: '100%',
+          maxWidth: 400,
+          padding: '16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 14,
+          boxSizing: 'border-box',
+        }}
+      >
       {/* Title Header with Monotone Window Controls (drag to move, double-click to dock top-right) */}
       <div
         data-tauri-drag-region
@@ -256,33 +340,94 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
       {/* AI Companion Card */}
       <AiRunCard aiRun={aiRun} timeline={timeline} />
 
-      {/* Screen Operator Card */}
-      {onToggleOperatorWatching && operatorMode && (
-        <OperatorCard
-          watching={!!operatorWatching}
-          mode={operatorMode}
-          lastFrame={operatorFrame ?? null}
-          inference={operatorInference ?? null}
-          proposal={operatorProposal ?? null}
-          thumbUrl={operatorThumbUrl ?? ''}
-          onToggleWatching={onToggleOperatorWatching}
-          onModeChange={onOperatorModeChange ?? (() => {})}
-          onCaptureNow={onOperatorCapture ?? (() => {})}
-          onApprove={onOperatorApprove ?? (() => {})}
-          onDeny={onOperatorDeny ?? (() => {})}
-        />
-      )}
+      {/* Side flyout launchers — full cards live in the left flyout */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        {showOperator && (
+          <button
+            onClick={() => onToggleSidePanel?.('operator')}
+            aria-expanded={sidePanel === 'operator'}
+            className="w11-card"
+            style={{
+              flex: 1,
+              minWidth: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 10px',
+              cursor: 'pointer',
+              textAlign: 'left',
+              borderColor: sidePanel === 'operator' ? 'rgba(255, 255, 255, 0.22)' : undefined,
+              backgroundColor: sidePanel === 'operator' ? 'rgba(255, 255, 255, 0.08)' : undefined,
+            }}
+            title="Open Screen Operator panel"
+          >
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                backgroundColor: '#ffffff',
+                opacity: operatorWatching ? 1 : 0.4,
+                flexShrink: 0,
+                display: 'inline-block',
+              }}
+            />
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#ffffff' }}>Screen Operator</span>
+              <span
+                style={{
+                  fontSize: 10,
+                  color: 'var(--text-tertiary)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {operatorStatus}
+              </span>
+            </span>
+            <span style={{ fontSize: 12, color: 'var(--text-tertiary)', flexShrink: 0 }}>‹</span>
+          </button>
+        )}
 
-      {/* Spotify Music Card */}
-      {onOpenSpotifySetup && onSpotifyControl && (
-        <SpotifyPlayerCard
-          track={spotifyTrack ?? null}
-          isConnected={!!isSpotifyConnected}
-          isConnecting={!!isSpotifyConnecting}
-          onOpenSetup={onOpenSpotifySetup}
-          onControl={onSpotifyControl}
-        />
-      )}
+        {onOpenSpotifySetup && onSpotifyControl && (
+          <button
+            onClick={() => onToggleSidePanel?.('spotify')}
+            aria-expanded={sidePanel === 'spotify'}
+            className="w11-card"
+            style={{
+              flex: 1,
+              minWidth: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 10px',
+              cursor: 'pointer',
+              textAlign: 'left',
+              borderColor: sidePanel === 'spotify' ? 'rgba(255, 255, 255, 0.22)' : undefined,
+              backgroundColor: sidePanel === 'spotify' ? 'rgba(255, 255, 255, 0.08)' : undefined,
+            }}
+            title="Open Spotify panel"
+          >
+            <span style={{ fontSize: 13, color: '#ffffff', flexShrink: 0 }}>♫</span>
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#ffffff' }}>Spotify</span>
+              <span
+                style={{
+                  fontSize: 10,
+                  color: 'var(--text-tertiary)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {spotifyStatus}
+              </span>
+            </span>
+            <span style={{ fontSize: 12, color: 'var(--text-tertiary)', flexShrink: 0 }}>‹</span>
+          </button>
+        )}
+      </div>
 
       {/* Workload & Focus Panel */}
       <div
@@ -371,6 +516,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
             Open IDE
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

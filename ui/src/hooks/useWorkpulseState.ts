@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { invoke, isTauri } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { LogicalPosition, LogicalSize } from '@tauri-apps/api/dpi';
 import {
   Task,
   TaskStatus,
@@ -279,20 +281,67 @@ export function useWorkpulseState() {
     haptics.hapticPop(200);
   }, []);
 
-  // Dynamically resize Tauri native window to match pill vs flyout
+  // Side flyout panel: Spotify / Screen Operator extend to the LEFT
+  // of the main column instead of stacking into one long widget.
+  const [sidePanel, setSidePanel] = useState<'spotify' | 'operator' | null>(null);
+
+  const toggleSidePanel = useCallback((panel: 'spotify' | 'operator') => {
+    haptics.snapClick();
+    setSidePanel((prev) => (prev === panel ? null : panel));
+  }, []);
+
+  const closeSidePanel = useCallback(() => {
+    setSidePanel(null);
+  }, []);
+
+  // Dynamically resize Tauri native window to match pill vs flyout.
+  // When a side panel opens, the window grows leftward so the main
+  // column stays visually anchored where the user left it.
+  const MAIN_W = 420;
+  const SIDE_W = 300;
+  const SIDE_GAP = 8;
+  const prevSideRef = useRef<'spotify' | 'operator' | null>(null);
   useEffect(() => {
-    if (isTauri()) {
-      if (isExpanded) {
-        invoke('set_widget_size', { width: 420, height: 640 }).catch(() => {});
-      } else {
-        invoke('set_widget_size', { width: 345, height: 48 }).catch(() => {});
+    if (!isTauri()) return;
+    const wasOpen = prevSideRef.current !== null;
+    const isOpen = sidePanel !== null && isExpanded;
+    prevSideRef.current = sidePanel;
+
+    (async () => {
+      try {
+        const win = getCurrentWindow();
+        if (!isExpanded) {
+          await win.setSize(new LogicalSize(345, 48));
+          return;
+        }
+        // Shift horizontally only on open/close transitions so the
+        // main column doesn't jump when switching between flyouts.
+        if (isOpen && !wasOpen) {
+          const [pos, scale] = await Promise.all([win.outerPosition(), win.scaleFactor()]);
+          const logical = pos.toLogical(scale);
+          await win.setPosition(new LogicalPosition(logical.x - (SIDE_W + SIDE_GAP), logical.y));
+        } else if (!isOpen && wasOpen) {
+          const [pos, scale] = await Promise.all([win.outerPosition(), win.scaleFactor()]);
+          const logical = pos.toLogical(scale);
+          await win.setPosition(new LogicalPosition(logical.x + (SIDE_W + SIDE_GAP), logical.y));
+        }
+        await win.setSize(new LogicalSize(isOpen ? MAIN_W + SIDE_GAP + SIDE_W : MAIN_W, 640));
+      } catch {
+        // Fallback to the native command if the window API is unavailable.
+        invoke(
+          'set_widget_size',
+          isExpanded ? { width: 420, height: 640 } : { width: 345, height: 48 }
+        ).catch(() => {});
       }
-    }
-  }, [isExpanded]);
+    })();
+  }, [isExpanded, sidePanel]);
 
   const toggleExpanded = useCallback(() => {
     haptics.snapClick();
-    setIsExpanded((prev) => !prev);
+    setIsExpanded((prev) => {
+      if (prev) setSidePanel(null);
+      return !prev;
+    });
   }, []);
 
   const toggleAlwaysOnTop = useCallback(() => {
@@ -661,6 +710,9 @@ export function useWorkpulseState() {
     deleteTask,
     clearPastCompletedTasks,
     clearAllCompletedTasks,
+    sidePanel,
+    toggleSidePanel,
+    closeSidePanel,
     toggleExpanded,
     toggleAlwaysOnTop,
     toggleMute,

@@ -50,7 +50,7 @@ pub struct SpotifyTrackDto {
 }
 
 // Module to handle Spotify's is_playing field safely
-mod boolean_or_int {
+pub mod boolean_or_int {
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]

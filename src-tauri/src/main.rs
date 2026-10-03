@@ -6,6 +6,7 @@ mod screen;
 mod server;
 mod watcher;
 mod spotify;
+mod windows_media;
 
 use db::{Database, TaskRecord, TimelineEventRecord};
 use std::sync::Mutex;
@@ -107,69 +108,104 @@ async fn spotify_get_status(state: State<'_, AppState>) -> Result<SpotifyStatusR
         db.get_spotify_auth().map_err(|e| e.to_string())?
     };
 
-    let Some(mut auth) = auth_opt else {
-        return Ok(SpotifyStatusResponse {
-            is_connected: false,
-            client_id: None,
-            track: None,
-        });
-    };
-
-    let now = chrono::Utc::now().timestamp();
-    // Auto-refresh token if expired or about to expire in 60s
-    if now >= auth.expires_at - 60 && !auth.refresh_token.is_empty() {
-        if let Ok(refreshed) = spotify::refresh_access_token(&auth.client_id, &auth.refresh_token).await {
-            auth.access_token = refreshed.access_token;
-            auth.expires_at = now + refreshed.expires_in;
-            if let Some(new_refresh) = refreshed.refresh_token {
-                auth.refresh_token = new_refresh;
-            }
-            if let Ok(db) = state.db.lock() {
-                let _ = db.save_spotify_auth(&auth);
+    if let Some(mut auth) = auth_opt {
+        let now = chrono::Utc::now().timestamp();
+        // Auto-refresh token if expired or about to expire in 60s
+        if now >= auth.expires_at - 60 && !auth.refresh_token.is_empty() {
+            if let Ok(refreshed) = spotify::refresh_access_token(&auth.client_id, &auth.refresh_token).await {
+                auth.access_token = refreshed.access_token;
+                auth.expires_at = now + refreshed.expires_in;
+                if let Some(new_refresh) = refreshed.refresh_token {
+                    auth.refresh_token = new_refresh;
+                }
+                if let Ok(db) = state.db.lock() {
+                    let _ = db.save_spotify_auth(&auth);
+                }
             }
         }
+
+        // Try Web API first
+        if let Ok(Some(track)) = spotify::fetch_current_playback(&auth.access_token).await {
+            return Ok(SpotifyStatusResponse {
+                is_connected: true,
+                client_id: Some(auth.client_id),
+                track: Some(track),
+            });
+        }
+
+        // If Web API returned None or error (e.g. Free account 403 or no cloud device),
+        // fallback seamlessly to Windows local desktop Spotify detection!
+        if let Some(local_track) = windows_media::get_local_spotify_track().await {
+            return Ok(SpotifyStatusResponse {
+                is_connected: true,
+                client_id: Some(auth.client_id),
+                track: Some(local_track),
+            });
+        }
+
+        return Ok(SpotifyStatusResponse {
+            is_connected: true,
+            client_id: Some(auth.client_id),
+            track: None,
+        });
     }
 
-    let track = spotify::fetch_current_playback(&auth.access_token).await.unwrap_or(None);
+    // Not authenticated via OAuth? Check if local Windows Spotify is running anyway!
+    if let Some(local_track) = windows_media::get_local_spotify_track().await {
+        return Ok(SpotifyStatusResponse {
+            is_connected: true,
+            client_id: None,
+            track: Some(local_track),
+        });
+    }
 
     Ok(SpotifyStatusResponse {
-        is_connected: true,
-        client_id: Some(auth.client_id),
-        track,
+        is_connected: false,
+        client_id: None,
+        track: None,
     })
 }
 
 #[tauri::command]
 async fn spotify_control(state: State<'_, AppState>, action: String) -> Result<(), String> {
-    let mut auth = {
+    let auth_opt = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
-        db.get_spotify_auth()
-            .map_err(|e| e.to_string())?
-            .ok_or_else(|| "Spotify is not connected".to_string())?
+        db.get_spotify_auth().map_err(|e| e.to_string())?
     };
 
-    let now = chrono::Utc::now().timestamp();
-    if now >= auth.expires_at - 60 && !auth.refresh_token.is_empty() {
-        if let Ok(refreshed) = spotify::refresh_access_token(&auth.client_id, &auth.refresh_token).await {
-            auth.access_token = refreshed.access_token;
-            auth.expires_at = now + refreshed.expires_in;
-            if let Some(new_refresh) = refreshed.refresh_token {
-                auth.refresh_token = new_refresh;
-            }
-            if let Ok(db) = state.db.lock() {
-                let _ = db.save_spotify_auth(&auth);
+    if let Some(mut auth) = auth_opt {
+        let now = chrono::Utc::now().timestamp();
+        if now >= auth.expires_at - 60 && !auth.refresh_token.is_empty() {
+            if let Ok(refreshed) = spotify::refresh_access_token(&auth.client_id, &auth.refresh_token).await {
+                auth.access_token = refreshed.access_token;
+                auth.expires_at = now + refreshed.expires_in;
+                if let Some(new_refresh) = refreshed.refresh_token {
+                    auth.refresh_token = new_refresh;
+                }
+                if let Ok(db) = state.db.lock() {
+                    let _ = db.save_spotify_auth(&auth);
+                }
             }
         }
+
+        let target_action = if action == "TOGGLE" {
+            let playback = spotify::fetch_current_playback(&auth.access_token).await.unwrap_or(None);
+            let is_playing = playback.map(|p| p.is_playing.0).unwrap_or(false);
+            if is_playing { "PAUSE" } else { "PLAY" }
+        } else {
+            &action
+        };
+
+        // Try Web API first (for Premium accounts)
+        if spotify::execute_player_action(&auth.access_token, target_action).await.is_ok() {
+            return Ok(());
+        }
+        // If Web API returned 403 (Free account) or failed, fall through to Windows hardware media keys!
     }
 
-    if action == "TOGGLE" {
-        let playback = spotify::fetch_current_playback(&auth.access_token).await.unwrap_or(None);
-        let is_playing = playback.map(|p| p.is_playing.0).unwrap_or(false);
-        let target_action = if is_playing { "PAUSE" } else { "PLAY" };
-        spotify::execute_player_action(&auth.access_token, target_action).await
-    } else {
-        spotify::execute_player_action(&auth.access_token, &action).await
-    }
+    // Windows Hardware Media Key Bypass (Works 100% on Spotify Free)
+    windows_media::send_media_key(&action);
+    Ok(())
 }
 
 #[tauri::command]
