@@ -8,13 +8,21 @@ import {
   TimelineEvent,
   IdeToWidgetMessage,
   calculateCompletionPercentage,
+  filterTodaysTasks,
+  filterPastCompletedTasks,
 } from '@workpulse/shared';
 import { haptics } from '../audio/haptics';
 
 const STORAGE_KEY_TASKS = 'workpulse_tasks_v3';
 const STORAGE_KEY_CONFIG = 'workpulse_config_v1';
 
-const getTodayDateStr = () => new Date().toISOString().split('T')[0];
+export const getTodayDateStr = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 const INITIAL_TASKS: Task[] = [];
 
@@ -22,9 +30,11 @@ const INITIAL_AI_RUN: AiRun = {
   id: 'live-gemini-opencode',
   agentName: 'Gemini 3.8 Flash & OpenCode',
   status: 'WORKING',
-  currentStepDescription: 'Dynamic telemetry bridge active · Monitoring tasks & agent runs',
-  filesModifiedCount: 14,
-  testStatus: 'PASSED',
+  goal: 'Monitoring live tasks & agent runs',
+  currentStepDescription: 'Waiting for live agent telemetry…',
+  filesModifiedCount: 0,
+  modifiedFiles: [],
+  testStatus: 'NOT_RUN',
   startedAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
 };
 
@@ -39,6 +49,8 @@ const INITIAL_TIMELINE: TimelineEvent[] = [
 ];
 
 export function useWorkpulseState() {
+  const [activeDate, setActiveDate] = useState<string>(getTodayDateStr);
+
   const [tasks, setTasks] = useState<Task[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_TASKS);
@@ -55,10 +67,68 @@ export function useWorkpulseState() {
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState<boolean>(true);
   const [isMuted, setIsMuted] = useState<boolean>(false);
 
-  // Focus Timer State
-  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(true);
-  const [focusSeconds, setFocusSeconds] = useState<number>(522);
+  // Focus Timer State (Daily scoped)
+  const [focusSeconds, setFocusSeconds] = useState<number>(() => {
+    try {
+      const today = getTodayDateStr();
+      const saved = localStorage.getItem(`workpulse_focus_seconds_${today}`);
+      return saved ? parseInt(saved, 10) : 0;
+    } catch {
+      return 0;
+    }
+  });
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const [targetMinutes, setTargetMinutes] = useState<number>(30);
+
+  // Check for date rollover (e.g. crossing midnight or opening on a new day)
+  useEffect(() => {
+    const checkDateRollover = () => {
+      const currentToday = getTodayDateStr();
+      const lastActiveDate = localStorage.getItem('workpulse_last_active_date');
+
+      if (!lastActiveDate) {
+        localStorage.setItem('workpulse_last_active_date', currentToday);
+      } else if (lastActiveDate !== currentToday) {
+        // A new day has arrived!
+        localStorage.setItem('workpulse_last_active_date', currentToday);
+        setActiveDate(currentToday);
+
+        // Rollover: update any pending (uncompleted) tasks to today
+        setTasks((prev) => {
+          let rolledCount = 0;
+          const updated = prev.map((t) => {
+            if (t.status !== 'DONE' && t.dayPlanDate !== currentToday) {
+              rolledCount++;
+              return { ...t, dayPlanDate: currentToday };
+            }
+            return t;
+          });
+
+          if (rolledCount > 0) {
+            setTimeline((prevTl) => [
+              {
+                id: 'evt-' + Date.now(),
+                dayPlanDate: currentToday,
+                eventType: 'TASK_START',
+                summary: `New day started · Rolled over ${rolledCount} pending task(s)`,
+                timestamp: new Date().toISOString(),
+              },
+              ...prevTl,
+            ]);
+          }
+          return updated;
+        });
+
+        // Reset daily focus timer for the new day
+        setFocusSeconds(0);
+        setIsTimerRunning(false);
+      }
+    };
+
+    checkDateRollover();
+    const timer = setInterval(checkDateRollover, 10000); // Check every 10s for midnight
+    return () => clearInterval(timer);
+  }, []);
 
   const adjustTargetMinutes = useCallback((delta: number) => {
     setTargetMinutes((prev) => {
@@ -75,6 +145,14 @@ export function useWorkpulseState() {
     } catch {}
   }, [tasks]);
 
+  // Persist daily focus timer
+  useEffect(() => {
+    try {
+      const today = getTodayDateStr();
+      localStorage.setItem(`workpulse_focus_seconds_${today}`, focusSeconds.toString());
+    } catch {}
+  }, [focusSeconds]);
+
   // Focus timer tick
   useEffect(() => {
     if (!isTimerRunning) return;
@@ -89,24 +167,43 @@ export function useWorkpulseState() {
     haptics.setMuted(isMuted);
   }, [isMuted]);
 
+  // Filter tasks into Today's workload vs Previous Days' completed tasks
+  const todaysTasks = useMemo(() => {
+    return filterTodaysTasks(tasks, activeDate);
+  }, [tasks, activeDate]);
+
+  const pastCompletedTasks = useMemo(() => {
+    return filterPastCompletedTasks(tasks, activeDate);
+  }, [tasks, activeDate]);
+
   const activeTask = useMemo(() => {
-    return tasks.find((t) => t.status === 'NOW') || null;
-  }, [tasks]);
+    return todaysTasks.find((t) => t.status === 'NOW') || null;
+  }, [todaysTasks]);
 
   const completionPercentage = useMemo(() => {
-    return calculateCompletionPercentage(tasks);
-  }, [tasks]);
+    return calculateCompletionPercentage(todaysTasks);
+  }, [todaysTasks]);
+
+  const todaysDoneCount = useMemo(() => {
+    return todaysTasks.filter((t) => t.status === 'DONE').length;
+  }, [todaysTasks]);
+
+  const todaysRemainingCount = useMemo(() => {
+    return todaysTasks.filter((t) => t.status !== 'DONE').length;
+  }, [todaysTasks]);
 
   const addTask = useCallback((title: string, preferredStatus?: TaskStatus) => {
     if (!title.trim()) return;
+    const currentToday = getTodayDateStr();
     let assignedStatus: TaskStatus = 'NEXT';
 
     setTasks((prev) => {
-      const hasNow = prev.some((t) => t.status === 'NOW');
+      const currentTodaysTasks = filterTodaysTasks(prev, currentToday);
+      const hasNow = currentTodaysTasks.some((t) => t.status === 'NOW');
       assignedStatus = preferredStatus || (hasNow ? 'NEXT' : 'NOW');
       const newTask: Task = {
         id: 'task-' + Date.now(),
-        dayPlanDate: getTodayDateStr(),
+        dayPlanDate: currentToday,
         title: title.trim(),
         status: assignedStatus,
         displayOrder: prev.length,
@@ -120,7 +217,7 @@ export function useWorkpulseState() {
     setTimeline((prev) => [
       {
         id: 'evt-' + Date.now(),
-        dayPlanDate: getTodayDateStr(),
+        dayPlanDate: currentToday,
         eventType: 'TASK_START',
         summary: `Created task “${title.trim()}”`,
         timestamp: new Date().toISOString(),
@@ -236,9 +333,14 @@ export function useWorkpulseState() {
           taskId: msg.payload.taskId,
           agentName: msg.payload.agentName,
           status: 'WORKING',
+          goal: msg.payload.goal,
           currentStepDescription: msg.payload.goal,
           filesModifiedCount: 0,
+          modifiedFiles: [],
           testStatus: 'NOT_RUN',
+          testSummary: undefined,
+          summary: undefined,
+          completedAt: undefined,
           startedAt: new Date().toISOString(),
         });
         haptics.hapticPop(400);
@@ -258,13 +360,36 @@ export function useWorkpulseState() {
       }
       case 'ai/status_update': {
         setAiRun((prev) => {
-          if (!prev) return null;
+          const isActive =
+            msg.payload.status === 'WORKING' ||
+            msg.payload.status === 'PLANNING' ||
+            msg.payload.status === 'RUNNING_TOOLS';
+          if (!prev) {
+            return {
+              id: msg.payload.runId,
+              agentName: msg.payload.agentName ?? 'Gemini 3.8 Flash & OpenCode',
+              status: msg.payload.status,
+              currentStepDescription: msg.payload.stepDescription ?? 'Working on task…',
+              currentStep: msg.payload.currentStep,
+              totalSteps: msg.payload.totalSteps,
+              filesModifiedCount: 0,
+              modifiedFiles: [],
+              testStatus: 'NOT_RUN',
+              startedAt: new Date().toISOString(),
+            };
+          }
           return {
             ...prev,
+            // Adopt the live run id so follow-up files/tests events match,
+            // but keep the friendly display name unless the payload provides one.
+            id: prev.id.startsWith('live-') || prev.id.startsWith('sim-') ? msg.payload.runId : prev.id,
+            agentName: msg.payload.agentName ?? prev.agentName,
             status: msg.payload.status,
             currentStepDescription: msg.payload.stepDescription ?? prev.currentStepDescription,
             currentStep: msg.payload.currentStep ?? prev.currentStep,
             totalSteps: msg.payload.totalSteps ?? prev.totalSteps,
+            // If work restarted, clear the finished timestamp so the timer resumes.
+            completedAt: isActive ? undefined : prev.completedAt,
           };
         });
         break;
@@ -286,9 +411,34 @@ export function useWorkpulseState() {
         break;
       }
       case 'ai/files_changed': {
-        setAiRun((prev) =>
-          prev ? { ...prev, filesModifiedCount: prev.filesModifiedCount + msg.payload.filePaths.length } : null
-        );
+        setAiRun((prev) => {
+          const incoming = Array.isArray(msg.payload.filePaths) ? msg.payload.filePaths : [];
+          if (incoming.length === 0) return prev;
+          if (!prev) {
+            const unique = Array.from(new Set(incoming));
+            return {
+              id: msg.payload.runId,
+              agentName: 'Gemini 3.8 Flash & OpenCode',
+              status: 'WORKING',
+              currentStepDescription: 'Working on task…',
+              filesModifiedCount: unique.length,
+              modifiedFiles: unique,
+              testStatus: 'NOT_RUN',
+              startedAt: new Date().toISOString(),
+            };
+          }
+          const merged = Array.from(new Set([...(prev.modifiedFiles ?? []), ...incoming]));
+          // Fall back to count arithmetic only when we have no file list yet
+          // (e.g. legacy senders that report counts without paths).
+          const nextCount =
+            (prev.modifiedFiles ?? []).length > 0 || incoming.length > 0
+              ? merged.length
+              : prev.filesModifiedCount + incoming.length;
+          if (nextCount === prev.filesModifiedCount && merged.length === (prev.modifiedFiles ?? []).length) {
+            return prev;
+          }
+          return { ...prev, filesModifiedCount: nextCount, modifiedFiles: merged };
+        });
         setTimeline((prev) => [
           {
             id: 'evt-' + Date.now(),
@@ -303,7 +453,25 @@ export function useWorkpulseState() {
         break;
       }
       case 'ai/tests_result': {
-        setAiRun((prev) => (prev ? { ...prev, testStatus: msg.payload.status } : null));
+        setAiRun((prev) => {
+          if (!prev) {
+            return {
+              id: msg.payload.runId,
+              agentName: 'Gemini 3.8 Flash & OpenCode',
+              status: 'WORKING',
+              currentStepDescription: 'Working on task…',
+              filesModifiedCount: 0,
+              modifiedFiles: [],
+              testStatus: msg.payload.status,
+              testSummary: msg.payload.summary,
+              startedAt: new Date().toISOString(),
+            };
+          }
+          if (prev.testStatus === msg.payload.status && prev.testSummary === msg.payload.summary) {
+            return prev;
+          }
+          return { ...prev, testStatus: msg.payload.status, testSummary: msg.payload.summary };
+        });
         setTimeline((prev) => [
           {
             id: 'evt-' + Date.now(),
@@ -323,6 +491,7 @@ export function useWorkpulseState() {
             ? {
                 ...prev,
                 status: msg.payload.status,
+                summary: msg.payload.summary ?? prev.summary,
                 completedAt: new Date().toISOString(),
               }
             : null
@@ -358,14 +527,46 @@ export function useWorkpulseState() {
     }
   }, []);
 
+  const clearPastCompletedTasks = useCallback(() => {
+    const currentToday = getTodayDateStr();
+    setTasks((prev) => {
+      return prev.filter((t) => {
+        if (t.status !== 'DONE') return true;
+        if (t.completedAt) return t.completedAt.startsWith(currentToday);
+        return t.dayPlanDate === currentToday;
+      });
+    });
+    haptics.snapClick();
+    setTimeline((prev) => [
+      {
+        id: 'evt-' + Date.now(),
+        dayPlanDate: currentToday,
+        eventType: 'TASK_DONE',
+        summary: 'Cleared completed tasks from previous days',
+        timestamp: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
+  }, []);
+
+  const clearAllCompletedTasks = useCallback(() => {
+    setTasks((prev) => prev.filter((t) => t.status !== 'DONE'));
+    haptics.snapClick();
+  }, []);
+
   return {
     tasks,
+    todaysTasks,
+    pastCompletedTasks,
     activeTask,
     aiRun,
     timeline,
     completionPercentage,
+    todaysDoneCount,
+    todaysRemainingCount,
     isExpanded,
     isAlwaysOnTop,
+    minimizeToTaskbar,
     isMuted,
     isTimerRunning,
     focusSeconds,
@@ -375,9 +576,10 @@ export function useWorkpulseState() {
     setActiveTask,
     updateTaskStatus,
     deleteTask,
+    clearPastCompletedTasks,
+    clearAllCompletedTasks,
     toggleExpanded,
     toggleAlwaysOnTop,
-    minimizeToTaskbar,
     toggleMute,
     toggleTimer,
     resetTimer,

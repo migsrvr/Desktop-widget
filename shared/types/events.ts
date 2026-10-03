@@ -33,11 +33,17 @@ export interface AiRun {
   taskId?: string;
   agentName: string;
   status: AiRunStatus;
+  /** Original goal / task the agent was asked to do (set on run_started). */
+  goal?: string;
   currentStepDescription?: string;
   currentStep?: number;
   totalSteps?: number;
   filesModifiedCount: number;
+  /** Deduped list of modified file paths backing filesModifiedCount. */
+  modifiedFiles?: string[];
   testStatus: TestStatus;
+  /** Human-readable test summary from the last ai/tests_result event. */
+  testSummary?: string;
   summary?: string;
   startedAt: string; // ISO timestamp
   completedAt?: string; // ISO timestamp
@@ -96,6 +102,7 @@ export type IdeToWidgetMessage =
       type: 'ai/status_update';
       payload: {
         runId: string;
+        agentName?: string;
         status: AiRunStatus;
         stepDescription?: string;
         currentStep?: number;
@@ -187,6 +194,45 @@ export function calculateCompletionPercentage(tasks: Task[]): number {
   if (tasks.length === 0) return 0;
   const doneCount = tasks.filter((t) => t.status === 'DONE').length;
   return Math.round((doneCount / tasks.length) * 100);
+}
+
+/**
+ * Filters tasks that belong to a specific day plan date.
+ * - Any uncompleted task (NOW, NEXT, LATER) is part of today's active workload (rolling over).
+ * - Completed tasks are only included if they were completed on today's date.
+ */
+export function filterTodaysTasks(tasks: Task[], todayDate: string): Task[] {
+  return tasks.filter((t) => {
+    if (t.status !== 'DONE') {
+      return true;
+    }
+    if (t.completedAt) {
+      return t.completedAt.startsWith(todayDate);
+    }
+    return t.dayPlanDate === todayDate;
+  });
+}
+
+/**
+ * Filters tasks that were marked DONE on a previous day.
+ */
+export function filterPastCompletedTasks(tasks: Task[], todayDate: string): Task[] {
+  return tasks.filter((t) => {
+    if (t.status !== 'DONE') return false;
+    if (t.completedAt) {
+      return !t.completedAt.startsWith(todayDate);
+    }
+    return t.dayPlanDate !== todayDate;
+  });
+}
+
+/**
+ * Calculates honest progress percentage specifically for today's workload.
+ * On a new day, past completed tasks are excluded so the meter cleanly reloads to 0% (or reflects only today).
+ */
+export function calculateDailyWorkloadPercentage(tasks: Task[], todayDate: string): number {
+  const todaysTasks = filterTodaysTasks(tasks, todayDate);
+  return calculateCompletionPercentage(todaysTasks);
 }
 
 /**

@@ -7,10 +7,13 @@ import { TimelineView } from './TimelineView';
 
 interface ExpandedPanelProps {
   tasks: Task[];
+  pastCompletedTasks?: Task[];
   activeTask: Task | null;
   aiRun: AiRun | null;
   timeline: TimelineEvent[];
   completionPercentage: number;
+  doneCount?: number;
+  remainingCount?: number;
   isAlwaysOnTop: boolean;
   isMuted: boolean;
   isTimerRunning: boolean;
@@ -27,15 +30,19 @@ interface ExpandedPanelProps {
   onUpdateTaskStatus: (id: string, status: TaskStatus) => void;
   onDeleteTask: (id: string) => void;
   onAddTask: (title: string, status: TaskStatus) => void;
+  onClearPastTasks?: () => void;
   onOpenIde?: () => void;
 }
 
 export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   tasks,
+  pastCompletedTasks = [],
   activeTask,
   aiRun,
   timeline,
   completionPercentage,
+  doneCount: propDoneCount,
+  remainingCount: propRemainingCount,
   isAlwaysOnTop,
   isMuted,
   isTimerRunning,
@@ -52,20 +59,30 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   onUpdateTaskStatus,
   onDeleteTask,
   onAddTask,
+  onClearPastTasks,
   onOpenIde,
 }) => {
   const [activeTab, setActiveTab] = useState<'tasks' | 'timeline'>('tasks');
+  const [currentTime, setCurrentTime] = React.useState(new Date());
 
-  const now = new Date();
-  const fullDateStr = now.toLocaleDateString([], {
+  React.useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const fullDateStr = currentTime.toLocaleDateString([], {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
   });
-  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const timeStr = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  const doneCount = tasks.filter((t) => t.status === 'DONE').length;
-  const remainingCount = tasks.length - doneCount;
+  const doneCount =
+    typeof propDoneCount === 'number'
+      ? propDoneCount
+      : tasks.filter((t) => t.status === 'DONE').length;
+  const remainingCount =
+    typeof propRemainingCount === 'number' ? propRemainingCount : tasks.length - doneCount;
 
   return (
     <div
@@ -208,10 +225,12 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
         {activeTab === 'tasks' ? (
           <TaskList
             tasks={tasks}
+            pastCompletedTasks={pastCompletedTasks}
             onSelectActive={onSelectActiveTask}
             onUpdateStatus={onUpdateTaskStatus}
             onDeleteTask={onDeleteTask}
             onAddTask={onAddTask}
+            onClearPastTasks={onClearPastTasks}
           />
         ) : (
           <TimelineView timeline={timeline} />

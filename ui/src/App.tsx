@@ -7,12 +7,17 @@ import { ExpandedPanel } from './components/ExpandedPanel';
 export const App: React.FC = () => {
   const {
     tasks,
+    todaysTasks,
+    pastCompletedTasks,
     activeTask,
     aiRun,
     timeline,
     completionPercentage,
+    todaysDoneCount,
+    todaysRemainingCount,
     isExpanded,
     isAlwaysOnTop,
+    minimizeToTaskbar,
     isMuted,
     isTimerRunning,
     focusSeconds,
@@ -22,9 +27,9 @@ export const App: React.FC = () => {
     setActiveTask,
     updateTaskStatus,
     deleteTask,
+    clearPastCompletedTasks,
     toggleExpanded,
     toggleAlwaysOnTop,
-    minimizeToTaskbar,
     toggleMute,
     toggleTimer,
     resetTimer,
@@ -36,8 +41,6 @@ export const App: React.FC = () => {
   });
 
   const [showSimMenu, setShowSimMenu] = useState(false);
-
-  const doneCount = tasks.filter((t) => t.status === 'DONE').length;
 
   const handleSimulateAiStart = () => {
     handleIncomingIdeMessage({
@@ -98,11 +101,14 @@ export const App: React.FC = () => {
       {isExpanded ? (
         <>
           <ExpandedPanel
-            tasks={tasks}
+            tasks={todaysTasks}
+            pastCompletedTasks={pastCompletedTasks}
             activeTask={activeTask}
             aiRun={aiRun}
             timeline={timeline}
             completionPercentage={completionPercentage}
+            doneCount={todaysDoneCount}
+            remainingCount={todaysRemainingCount}
             isAlwaysOnTop={isAlwaysOnTop}
             isMuted={isMuted}
             isTimerRunning={isTimerRunning}
@@ -119,6 +125,7 @@ export const App: React.FC = () => {
             onUpdateTaskStatus={updateTaskStatus}
             onDeleteTask={deleteTask}
             onAddTask={addTask}
+            onClearPastTasks={clearPastCompletedTasks}
             onOpenIde={handleOpenIde}
           />
 
@@ -211,8 +218,8 @@ export const App: React.FC = () => {
         <CollapsedPill
           activeTask={activeTask}
           aiRun={aiRun}
-          tasksCount={tasks.length}
-          doneCount={doneCount}
+          tasksCount={todaysTasks.length}
+          doneCount={todaysDoneCount}
           focusSeconds={focusSeconds}
           isTimerRunning={isTimerRunning}
           onExpand={toggleExpanded}
