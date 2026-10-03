@@ -47,12 +47,17 @@ export function useSpotifyPlayer() {
     refresh();
   }, [refresh]);
 
-  // Polling loop when connected
+  // Polling loop: runs continuously to auto-detect Spotify Free desktop or track changes
   useEffect(() => {
-    if (!authStatus.isConnected) return;
-
     let intervalId: number;
-    const pollInterval = track?.isPlaying ? 3000 : 6000;
+    // When disconnected: poll every 4s to auto-detect when Spotify is opened/played on Windows
+    // When playing: poll every 3s for smooth progress
+    // When paused: poll every 5s
+    const pollInterval = !authStatus.isConnected
+      ? 4000
+      : track?.isPlaying
+      ? 3000
+      : 5000;
 
     intervalId = window.setInterval(() => {
       if (!isPollingRef.current) {
@@ -167,6 +172,7 @@ export function useSpotifyPlayer() {
     controlPlayback,
     disconnect,
     refresh,
+    detectLocal: refresh,
     handleAuthSuccess,
   };
 }

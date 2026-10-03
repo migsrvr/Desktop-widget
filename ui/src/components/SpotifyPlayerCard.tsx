@@ -7,6 +7,7 @@ interface SpotifyPlayerCardProps {
   isConnecting: boolean;
   onOpenSetup: () => void;
   onControl: (action: SpotifyPlaybackAction) => void;
+  onDetectLocal?: () => void;
 }
 
 export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
@@ -15,6 +16,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
   isConnecting,
   onOpenSetup,
   onControl,
+  onDetectLocal,
 }) => {
   // If not connected to Spotify yet
   if (!isConnected) {
@@ -50,23 +52,39 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
               Spotify Audio
             </span>
             <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
-              Connect to control study & focus music
+              Free Desktop & Web API
             </span>
           </div>
         </div>
 
-        <button
-          onClick={onOpenSetup}
-          className="apple-btn-text"
-          style={{
-            fontSize: 11,
-            padding: '3px 8px',
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            borderColor: 'rgba(255, 255, 255, 0.14)',
-          }}
-        >
-          {isConnecting ? 'Waiting…' : 'Connect'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          {onDetectLocal && (
+            <button
+              onClick={onDetectLocal}
+              className="apple-btn-text"
+              style={{
+                fontSize: 10,
+                padding: '3px 8px',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                borderColor: 'rgba(255, 255, 255, 0.16)',
+              }}
+              title="Detect Spotify desktop app on this PC"
+            >
+              Detect
+            </button>
+          )}
+          <button
+            onClick={onOpenSetup}
+            className="apple-btn-text"
+            style={{
+              fontSize: 10,
+              padding: '3px 8px',
+            }}
+            title="Open Spotify Settings"
+          >
+            Setup
+          </button>
+        </div>
       </div>
     );
   }

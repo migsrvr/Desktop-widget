@@ -189,6 +189,7 @@ export const App: React.FC = () => {
             isSpotifyConnecting={spotify.isConnecting}
             onOpenSpotifySetup={() => setIsSpotifyModalOpen(true)}
             onSpotifyControl={spotify.controlPlayback}
+            onDetectSpotifyLocal={spotify.detectLocal}
             operatorWatching={operator.watching}
             operatorMode={operator.mode}
             operatorFrame={operator.lastFrame}
@@ -323,10 +324,12 @@ export const App: React.FC = () => {
         onClose={() => setIsSpotifyModalOpen(false)}
         isConnected={spotify.authStatus.isConnected}
         activeClientId={spotify.authStatus.clientId}
+        track={spotify.track}
         isConnecting={spotify.isConnecting}
         error={spotify.error}
         onConnect={(clientId) => spotify.startAuth(clientId)}
         onDisconnect={spotify.disconnect}
+        onDetectLocal={spotify.detectLocal}
       />
     </div>
   );

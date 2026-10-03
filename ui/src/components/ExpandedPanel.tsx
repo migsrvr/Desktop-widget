@@ -45,6 +45,7 @@ interface ExpandedPanelProps {
   isSpotifyConnecting?: boolean;
   onOpenSpotifySetup?: () => void;
   onSpotifyControl?: (action: SpotifyPlaybackAction) => void;
+  onDetectSpotifyLocal?: () => void;
   operatorWatching?: boolean;
   operatorMode?: ScreenMode;
   operatorFrame?: ScreenFrameMeta | null;
@@ -95,6 +96,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   isSpotifyConnecting,
   onOpenSpotifySetup,
   onSpotifyControl,
+  onDetectSpotifyLocal,
   operatorWatching,
   operatorMode,
   operatorFrame,
@@ -187,6 +189,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
               isConnecting={!!isSpotifyConnecting}
               onOpenSetup={onOpenSpotifySetup}
               onControl={onSpotifyControl}
+              onDetectLocal={onDetectSpotifyLocal}
             />
           )}
 

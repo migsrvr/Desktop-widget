@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { SPOTIFY_REDIRECT_URI } from '@workpulse/shared';
+import { SPOTIFY_REDIRECT_URI, SpotifyTrack } from '@workpulse/shared';
 
 interface SpotifySetupModalProps {
   isOpen: boolean;
   onClose: () => void;
   isConnected: boolean;
   activeClientId?: string;
+  track?: SpotifyTrack | null;
   isConnecting: boolean;
   error: string | null;
   onConnect: (clientId: string) => void;
   onDisconnect: () => void;
+  onDetectLocal?: () => void;
 }
 
 export const SpotifySetupModal: React.FC<SpotifySetupModalProps> = ({
@@ -17,13 +19,17 @@ export const SpotifySetupModal: React.FC<SpotifySetupModalProps> = ({
   onClose,
   isConnected,
   activeClientId,
+  track,
   isConnecting,
   error,
   onConnect,
   onDisconnect,
+  onDetectLocal,
 }) => {
+  const [activeTab, setActiveTab] = useState<'local' | 'webapi'>('local');
   const [clientIdInput, setClientIdInput] = useState(activeClientId || '');
   const [copied, setCopied] = useState(false);
+  const [isDetecting, setIsDetecting] = useState(false);
 
   if (!isOpen) return null;
 
@@ -33,12 +39,22 @@ export const SpotifySetupModal: React.FC<SpotifySetupModalProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleDetectClick = async () => {
+    if (onDetectLocal) {
+      setIsDetecting(true);
+      await onDetectLocal();
+      setTimeout(() => setIsDetecting(false), 600);
+    }
+  };
+
+  const handleSubmitWebApi = (e: React.FormEvent) => {
     e.preventDefault();
     if (clientIdInput.trim()) {
       onConnect(clientIdInput.trim());
     }
   };
+
+  const isLocalMode = isConnected && !activeClientId;
 
   return (
     <div
@@ -49,13 +65,13 @@ export const SpotifySetupModal: React.FC<SpotifySetupModalProps> = ({
         right: 0,
         bottom: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 9999,
-        padding: 14,
+        padding: 16,
         boxSizing: 'border-box',
       }}
       onClick={(e) => {
@@ -66,95 +82,174 @@ export const SpotifySetupModal: React.FC<SpotifySetupModalProps> = ({
         className="w11-acrylic-panel"
         style={{
           width: '100%',
-          maxWidth: 320,
-          padding: '16px',
+          maxWidth: 380,
+          padding: '18px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 12,
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+          gap: 14,
+          borderRadius: 'var(--radius-md, 14px)',
+          boxShadow: '0 24px 48px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.12)',
         }}
       >
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#ffffff' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ fontSize: 14, color: '#ffffff' }}>♫</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#ffffff', letterSpacing: '-0.2px' }}>
               Spotify Integration
             </span>
           </div>
           <button
             onClick={onClose}
             className="apple-btn-text"
-            style={{ padding: '2px 6px', fontSize: 11 }}
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 0,
+              fontSize: 12,
+              lineHeight: 1,
+            }}
+            title="Close"
           >
             ✕
           </button>
         </div>
 
-        {isConnected ? (
-          /* Connected State */
+        {/* Tab Switcher: Desktop App (Free) vs Web API (Developer) */}
+        <div className="apple-segmented-container" style={{ padding: 2 }}>
+          <button
+            type="button"
+            onClick={() => setActiveTab('local')}
+            className={`apple-segmented-item ${activeTab === 'local' ? 'active' : ''}`}
+            style={{ flex: 1, fontSize: 11, padding: '5px 0' }}
+          >
+            Desktop App (Free)
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('webapi')}
+            className={`apple-segmented-item ${activeTab === 'webapi' ? 'active' : ''}`}
+            style={{ flex: 1, fontSize: 11, padding: '5px 0' }}
+          >
+            Web API (Developer)
+          </button>
+        </div>
+
+        {/* TAB 1: Local Desktop App (Free Account Bypass) */}
+        {activeTab === 'local' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8,
-                padding: '8px 10px',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                gap: 9,
+                padding: '9px 11px',
+                borderRadius: 'var(--radius-sm, 8px)',
+                backgroundColor: isConnected ? 'rgba(255, 255, 255, 0.07)' : 'rgba(255, 255, 255, 0.03)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
               }}
             >
               <span
                 style={{
-                  width: 7,
-                  height: 7,
+                  width: 8,
+                  height: 8,
                   borderRadius: '50%',
                   backgroundColor: '#ffffff',
+                  opacity: isConnected ? 1 : 0.4,
+                  flexShrink: 0,
                 }}
               />
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#ffffff' }}>
-                  Connected to Spotify
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#ffffff' }}>
+                  {isConnected
+                    ? isLocalMode
+                      ? 'Local Desktop Connected'
+                      : 'Spotify Web API Connected'
+                    : 'Looking for Spotify on Windows'}
                 </span>
-                {activeClientId && (
-                  <span
-                    style={{
-                      fontSize: 10,
-                      color: 'var(--text-tertiary)',
-                      fontFamily: 'monospace',
-                    }}
-                  >
-                    ID: {activeClientId.slice(0, 8)}…{activeClientId.slice(-4)}
-                  </span>
-                )}
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: 'var(--text-tertiary)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {track ? `${track.name} · ${track.artist}` : 'Requires Spotify desktop app running on this PC'}
+                </span>
               </div>
             </div>
 
-            <p style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-              WorkPulse is linked to your Spotify account. Playback status and media controls are active in both the flyout and floating pill.
-            </p>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
+                padding: '10px 12px',
+                borderRadius: 'var(--radius-sm, 8px)',
+                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid rgba(255, 255, 255, 0.06)',
+                fontSize: 11,
+                lineHeight: 1.45,
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <span style={{ fontWeight: 600, color: '#ffffff' }}>
+                Why use Desktop Mode?
+              </span>
+              <span>
+                • <strong>100% Free</strong>: Works with Spotify Free without Spotify Premium.
+              </span>
+              <span>
+                • <strong>Zero Configuration</strong>: No Spotify Developer accounts or Client IDs needed.
+              </span>
+              <span>
+                • <strong>Native Controls</strong>: Uses Windows hardware media keys and window title detection for fast playback.
+              </span>
+            </div>
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+              {isConnected && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onDisconnect();
+                  }}
+                  className="apple-btn-text"
+                  style={{ color: '#ff6b6b' }}
+                >
+                  Disconnect
+                </button>
+              )}
               <button
-                onClick={() => {
-                  onDisconnect();
-                  onClose();
-                }}
+                type="button"
+                onClick={handleDetectClick}
+                disabled={isDetecting}
                 className="apple-btn-text"
-                style={{ color: '#ff6b6b' }}
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  borderColor: 'rgba(255, 255, 255, 0.16)',
+                }}
               >
-                Disconnect
+                {isDetecting ? 'Scanning…' : 'Detect Spotify Now'}
               </button>
-              <button onClick={onClose} className="apple-btn-primary">
+              <button type="button" onClick={onClose} className="apple-btn-primary">
                 Done
               </button>
             </div>
           </div>
-        ) : (
-          /* Connect Setup Flow */
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <p style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-              Control your study & focus music directly inside WorkPulse.
+        )}
+
+        {/* TAB 2: Web API (Developer Dashboard PKCE Flow) */}
+        {activeTab === 'webapi' && (
+          <form onSubmit={handleSubmitWebApi} style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+            <p style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4, margin: 0 }}>
+              Connect Spotify Web API for cross-device cloud sync (requires a Spotify Developer App and Spotify Premium).
             </p>
 
             {/* Step 1 & 2 Instructions */}
@@ -162,40 +257,38 @@ export const SpotifySetupModal: React.FC<SpotifySetupModalProps> = ({
               style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 6,
-                padding: '8px 10px',
-                borderRadius: 'var(--radius-sm)',
+                gap: 7,
+                padding: '10px 12px',
+                borderRadius: 'var(--radius-sm, 8px)',
                 backgroundColor: 'rgba(255, 255, 255, 0.03)',
                 border: '1px solid rgba(255, 255, 255, 0.06)',
                 fontSize: 11,
               }}
             >
-              <span style={{ color: 'var(--text-tertiary)', fontWeight: 600 }}>Setup (1 minute):</span>
+              <span style={{ color: 'var(--text-tertiary)', fontWeight: 600 }}>Setup Instructions:</span>
               <span style={{ color: 'var(--text-secondary)' }}>
-                1. In Spotify Developer Dashboard, create an app.
+                1. Go to <strong>developer.spotify.com/dashboard</strong> and create an app.
               </span>
               <span style={{ color: 'var(--text-secondary)' }}>
-                2. Add this Redirect URI:
+                2. In App Settings, add this Redirect URI:
               </span>
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 4,
-                  backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                  padding: '4px 6px',
-                  borderRadius: 'var(--radius-xs)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  gap: 6,
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  padding: '6px 8px',
+                  borderRadius: 'var(--radius-xs, 6px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
                 }}
               >
                 <span
                   style={{
-                    fontSize: 9,
-                    fontFamily: 'monospace',
-                    color: 'var(--text-secondary)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
+                    fontSize: 10,
+                    fontFamily: 'JetBrains Mono, monospace',
+                    color: '#ffffff',
+                    wordBreak: 'break-all',
                     flex: 1,
                   }}
                 >
@@ -205,9 +298,14 @@ export const SpotifySetupModal: React.FC<SpotifySetupModalProps> = ({
                   type="button"
                   onClick={handleCopyUri}
                   className="apple-btn-text"
-                  style={{ fontSize: 9, padding: '1px 5px' }}
+                  style={{
+                    fontSize: 10,
+                    padding: '3px 8px',
+                    backgroundColor: copied ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.08)',
+                    flexShrink: 0,
+                  }}
                 >
-                  {copied ? 'Copied' : 'Copy'}
+                  {copied ? '✓ Copied' : 'Copy'}
                 </button>
               </div>
             </div>
@@ -221,17 +319,17 @@ export const SpotifySetupModal: React.FC<SpotifySetupModalProps> = ({
                 type="text"
                 value={clientIdInput}
                 onChange={(e) => setClientIdInput(e.target.value)}
-                placeholder="e.g. 7f8a19b..."
+                placeholder="e.g. 7f8a19b0245a49..."
                 disabled={isConnecting}
                 style={{
                   width: '100%',
-                  padding: '7px 9px',
-                  borderRadius: 'var(--radius-sm)',
-                  backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  padding: '8px 10px',
+                  borderRadius: 'var(--radius-sm, 8px)',
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  border: '1px solid rgba(255, 255, 255, 0.14)',
                   color: '#ffffff',
                   fontSize: 11,
-                  fontFamily: 'monospace',
+                  fontFamily: 'JetBrains Mono, monospace',
                   outline: 'none',
                   boxSizing: 'border-box',
                 }}
@@ -268,7 +366,19 @@ export const SpotifySetupModal: React.FC<SpotifySetupModalProps> = ({
             )}
 
             {/* Actions */}
-            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', marginTop: 4 }}>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+              {isConnected && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onDisconnect();
+                  }}
+                  className="apple-btn-text"
+                  style={{ color: '#ff6b6b' }}
+                >
+                  Disconnect
+                </button>
+              )}
               <button
                 type="button"
                 onClick={onClose}
@@ -286,7 +396,7 @@ export const SpotifySetupModal: React.FC<SpotifySetupModalProps> = ({
                   cursor: !clientIdInput.trim() || isConnecting ? 'not-allowed' : 'pointer',
                 }}
               >
-                {isConnecting ? 'Waiting…' : 'Connect'}
+                {isConnecting ? 'Waiting…' : 'Connect Web API'}
               </button>
             </div>
           </form>
