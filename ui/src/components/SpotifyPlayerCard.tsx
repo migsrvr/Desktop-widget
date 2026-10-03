@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { SpotifyTrack, SpotifyPlaybackAction, formatTrackDuration } from '@workpulse/shared';
 
 interface SpotifyPlayerCardProps {
@@ -18,16 +18,34 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
   onControl,
   onDetectLocal,
 }) => {
+  const [isArtworkExpanded, setIsArtworkExpanded] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('workpulse:spotify_artwork_expanded');
+      return saved !== null ? saved === 'true' : true; // Default to true: show large cover
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleArtworkExpanded = () => {
+    setIsArtworkExpanded((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('workpulse:spotify_artwork_expanded', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
   // If not connected to Spotify yet
   if (!isConnected) {
     return (
       <div
         className="w11-card"
         style={{
-          padding: '10px 12px',
+          padding: '12px',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+          flexDirection: 'column',
           gap: 10,
         }}
       >
@@ -57,32 +75,32 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
           {onDetectLocal && (
             <button
               onClick={onDetectLocal}
               className="apple-btn-text"
               style={{
                 fontSize: 10,
-                padding: '3px 8px',
+                padding: '4px 10px',
                 backgroundColor: 'rgba(255, 255, 255, 0.08)',
                 borderColor: 'rgba(255, 255, 255, 0.16)',
               }}
               title="Detect Spotify desktop app on this PC"
             >
-              Detect
+              Detect Local
             </button>
           )}
           <button
             onClick={onOpenSetup}
-            className="apple-btn-text"
+            className="apple-btn-primary"
             style={{
               fontSize: 10,
-              padding: '3px 8px',
+              padding: '4px 10px',
             }}
             title="Open Spotify Settings"
           >
-            Setup
+            {isConnecting ? 'Waiting…' : 'Setup'}
           </button>
         </div>
       </div>
@@ -95,7 +113,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
       <div
         className="w11-card"
         style={{
-          padding: '10px 12px',
+          padding: '12px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -123,7 +141,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
               Spotify Connected
             </span>
             <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
-              Open Spotify on your PC or phone to play
+              Play any track on Spotify to display artwork
             </span>
           </div>
         </div>
@@ -140,13 +158,272 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
     );
   }
 
-  // Active playback card
   const progressPercent =
     track.durationMs > 0
       ? Math.min(100, Math.max(0, (track.progressMs / track.durationMs) * 100))
       : 0;
 
-  // Compact single-row card: artwork, track, times, inline transport.
+  // VIEW 1: Expanded Big Cover Artwork Player
+  if (isArtworkExpanded) {
+    return (
+      <div
+        className="w11-card"
+        style={{
+          padding: '14px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+          position: 'relative',
+          overflow: 'hidden',
+          backgroundColor: 'rgba(255, 255, 255, 0.03)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: 'var(--radius-md, 14px)',
+        }}
+      >
+        {/* Top Header Row with Mini Toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 13, color: '#ffffff' }}>♫</span>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: 'var(--text-secondary)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.6px',
+              }}
+            >
+              Now Playing
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button
+              onClick={toggleArtworkExpanded}
+              className="apple-btn-text"
+              style={{
+                fontSize: 10,
+                padding: '2px 7px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+              title="Minimize to compact row"
+            >
+              <span>▾</span>
+              <span>Mini</span>
+            </button>
+            <button
+              onClick={onOpenSetup}
+              className="apple-btn-text"
+              style={{ padding: '2px 6px', fontSize: 10 }}
+              title="Spotify Settings"
+            >
+              ⚙
+            </button>
+          </div>
+        </div>
+
+        {/* Large Album Artwork Box */}
+        <div
+          style={{
+            width: '100%',
+            aspectRatio: '1 / 1',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            boxShadow: '0 12px 28px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+          }}
+        >
+          {track.albumArtUrl ? (
+            <img
+              src={track.albumArtUrl}
+              alt={track.album}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 8,
+                color: 'var(--text-tertiary)',
+              }}
+            >
+              <span style={{ fontSize: 44 }}>♫</span>
+              <span style={{ fontSize: 11, fontWeight: 500 }}>Spotify Audio</span>
+            </div>
+          )}
+        </div>
+
+        {/* Track Title and Artist */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            gap: 3,
+            padding: '0 4px',
+          }}
+        >
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: '#ffffff',
+              letterSpacing: '-0.2px',
+              maxWidth: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+            title={track.name}
+          >
+            {track.name}
+          </span>
+          <span
+            style={{
+              fontSize: 11,
+              color: 'var(--text-secondary)',
+              maxWidth: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+            title={track.artist}
+          >
+            {track.artist}
+          </span>
+          {track.album && track.album !== 'Spotify Free (Desktop)' && (
+            <span
+              style={{
+                fontSize: 10,
+                color: 'var(--text-tertiary)',
+                maxWidth: '100%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {track.album}
+            </span>
+          )}
+        </div>
+
+        {/* Progress Bar (when duration is known) */}
+        {track.durationMs > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
+            <div
+              style={{
+                height: 4,
+                width: '100%',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: 'var(--radius-pill)',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  height: '100%',
+                  width: `${progressPercent}%`,
+                  backgroundColor: '#ffffff',
+                  borderRadius: 'var(--radius-pill)',
+                  transition: 'width 0.4s linear',
+                }}
+              />
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: 10,
+                color: 'var(--text-tertiary)',
+                fontFamily: 'JetBrains Mono, SF Mono, monospace',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              <span>{formatTrackDuration(track.progressMs)}</span>
+              <span>{formatTrackDuration(track.durationMs)}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Large Tactile Transport Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginTop: 2 }}>
+          <button
+            onClick={() => onControl('PREVIOUS')}
+            className="apple-btn-text"
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 14,
+              padding: 0,
+              backgroundColor: 'rgba(255, 255, 255, 0.06)',
+            }}
+            title="Previous Track"
+          >
+            ⏮
+          </button>
+          <button
+            onClick={() => onControl(track.isPlaying ? 'PAUSE' : 'PLAY')}
+            className="apple-btn-text"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 18,
+              padding: 0,
+              color: '#ffffff',
+              backgroundColor: 'rgba(255, 255, 255, 0.18)',
+              borderColor: 'rgba(255, 255, 255, 0.28)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+            }}
+            title={track.isPlaying ? 'Pause' : 'Play'}
+          >
+            {track.isPlaying ? '⏸' : '▶'}
+          </button>
+          <button
+            onClick={() => onControl('NEXT')}
+            className="apple-btn-text"
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 14,
+              padding: 0,
+              backgroundColor: 'rgba(255, 255, 255, 0.06)',
+            }}
+            title="Next Track"
+          >
+            ⏭
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // VIEW 2: Compact Mini Row (when user minimizes the card)
   return (
     <div
       className="w11-card"
@@ -170,7 +447,10 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
               objectFit: 'cover',
               border: '1px solid rgba(255, 255, 255, 0.1)',
               flexShrink: 0,
+              cursor: 'pointer',
             }}
+            onClick={toggleArtworkExpanded}
+            title="Click to expand song cover"
           />
         ) : (
           <div
@@ -185,13 +465,20 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
               fontSize: 13,
               color: '#ffffff',
               flexShrink: 0,
+              cursor: 'pointer',
             }}
+            onClick={toggleArtworkExpanded}
+            title="Click to expand song cover"
           >
             ♫
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+        <div
+          style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, cursor: 'pointer' }}
+          onClick={toggleArtworkExpanded}
+          title="Click to expand song cover"
+        >
           <span
             style={{
               fontSize: 12,
@@ -201,7 +488,6 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
             }}
-            title={track.device ? `${track.name} · via ${track.device.name}` : track.name}
           >
             {track.name}
           </span>
@@ -215,13 +501,14 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
               fontFamily: 'JetBrains Mono, SF Mono, monospace',
               fontVariantNumeric: 'tabular-nums',
             }}
-            title={`${track.artist} · ${track.album}`}
           >
-            {track.artist} · {formatTrackDuration(track.progressMs)}/{formatTrackDuration(track.durationMs)}
+            {track.artist}
+            {track.durationMs > 0 &&
+              ` · ${formatTrackDuration(track.progressMs)}/${formatTrackDuration(track.durationMs)}`}
           </span>
         </div>
 
-        {/* Inline transport */}
+        {/* Inline transport controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
           <button
             onClick={() => onControl('PREVIOUS')}
@@ -254,6 +541,14 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
             ⏭
           </button>
           <button
+            onClick={toggleArtworkExpanded}
+            className="apple-btn-text"
+            style={{ padding: '3px 6px', fontSize: 10 }}
+            title="Expand song cover"
+          >
+            ▴
+          </button>
+          <button
             onClick={onOpenSetup}
             className="apple-btn-text"
             style={{ padding: '3px 6px', fontSize: 10 }}
@@ -264,24 +559,26 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
         </div>
       </div>
 
-      {/* Slim progress strip pinned to the card edge */}
-      <div
-        style={{
-          height: 2,
-          margin: '0 -10px',
-          backgroundColor: 'rgba(255, 255, 255, 0.08)',
-          overflow: 'hidden',
-        }}
-      >
+      {/* Slim progress strip */}
+      {track.durationMs > 0 && (
         <div
           style={{
-            height: '100%',
-            width: `${progressPercent}%`,
-            backgroundColor: '#ffffff',
-            transition: 'width 0.4s linear',
+            height: 2,
+            margin: '0 -10px',
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            overflow: 'hidden',
           }}
-        />
-      </div>
+        >
+          <div
+            style={{
+              height: '100%',
+              width: `${progressPercent}%`,
+              backgroundColor: '#ffffff',
+              transition: 'width 0.4s linear',
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };
