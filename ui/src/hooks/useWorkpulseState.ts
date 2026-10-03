@@ -12,6 +12,7 @@ import {
   filterPastCompletedTasks,
 } from '@workpulse/shared';
 import { haptics } from '../audio/haptics';
+import { useSpotifyPlayer } from './useSpotifyPlayer';
 
 const STORAGE_KEY_TASKS = 'workpulse_tasks_v3';
 const STORAGE_KEY_CONFIG = 'workpulse_config_v1';
@@ -79,6 +80,9 @@ export function useWorkpulseState() {
   });
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const [targetMinutes, setTargetMinutes] = useState<number>(30);
+
+  // Spotify integration
+  const spotify = useSpotifyPlayer();
 
   // Check for date rollover (e.g. crossing midnight or opening on a new day)
   useEffect(() => {
@@ -439,13 +443,22 @@ export function useWorkpulseState() {
           }
           return { ...prev, filesModifiedCount: nextCount, modifiedFiles: merged };
         });
+        const incomingPaths = Array.isArray(msg.payload.filePaths) ? msg.payload.filePaths : [];
+        const preview =
+          incomingPaths.length <= 3
+            ? incomingPaths.join(', ')
+            : `${incomingPaths.slice(0, 3).join(', ')} +${incomingPaths.length - 3} more`;
         setTimeline((prev) => [
           {
             id: 'evt-' + Date.now(),
             dayPlanDate: getTodayDateStr(),
             aiRunId: msg.payload.runId,
             eventType: 'FILES_CHANGED',
-            summary: `${msg.payload.filePaths.length} files modified`,
+            summary:
+              incomingPaths.length > 0
+                ? `${incomingPaths.length} file${incomingPaths.length === 1 ? '' : 's'} modified · ${preview}`
+                : 'Files updated',
+            metadata: { filePaths: incomingPaths },
             timestamp: new Date().toISOString(),
           },
           ...prev,
@@ -478,7 +491,10 @@ export function useWorkpulseState() {
             dayPlanDate: getTodayDateStr(),
             aiRunId: msg.payload.runId,
             eventType: 'TESTS_RUN',
-            summary: `Tests ${msg.payload.status.toLowerCase()}`,
+            summary: msg.payload.summary
+              ? `Tests ${msg.payload.status.toLowerCase()} · ${msg.payload.summary}`
+              : `Tests ${msg.payload.status.toLowerCase()}`,
+            metadata: msg.payload.summary ? { summary: msg.payload.summary } : undefined,
             timestamp: new Date().toISOString(),
           },
           ...prev,
@@ -524,8 +540,12 @@ export function useWorkpulseState() {
         }
         break;
       }
+      case 'spotify/auth_success': {
+        spotify.handleAuthSuccess(msg.payload.clientId);
+        break;
+      }
     }
-  }, []);
+  }, [addTask, spotify]);
 
   const clearPastCompletedTasks = useCallback(() => {
     const currentToday = getTodayDateStr();
@@ -584,5 +604,6 @@ export function useWorkpulseState() {
     toggleTimer,
     resetTimer,
     handleIncomingIdeMessage,
+    spotify,
   };
 }

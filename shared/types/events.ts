@@ -147,6 +147,13 @@ export type IdeToWidgetMessage =
         message: string;
         filesChanged: number;
       };
+    }
+  | {
+      type: 'spotify/auth_success';
+      payload: {
+        isConnected: boolean;
+        clientId: string;
+      };
     };
 
 export type WidgetToIdeMessage =
