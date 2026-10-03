@@ -1,5 +1,5 @@
 import React from 'react';
-import { Task, AiRun } from '@workpulse/shared';
+import { Task, AiRun, SpotifyTrack, SpotifyPlaybackAction } from '@workpulse/shared';
 
 interface CollapsedPillProps {
   activeTask: Task | null;
@@ -11,6 +11,9 @@ interface CollapsedPillProps {
   onExpand: () => void;
   onToggleTimer: (e: React.MouseEvent) => void;
   onMinimizeToTaskbar?: () => void;
+  onDockTopRight?: () => void;
+  spotifyTrack?: SpotifyTrack | null;
+  onSpotifyControl?: (action: SpotifyPlaybackAction) => void;
 }
 
 export const CollapsedPill: React.FC<CollapsedPillProps> = ({
@@ -23,6 +26,9 @@ export const CollapsedPill: React.FC<CollapsedPillProps> = ({
   onExpand,
   onToggleTimer,
   onMinimizeToTaskbar,
+  onDockTopRight,
+  spotifyTrack,
+  onSpotifyControl,
 }) => {
   const formatTime = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60);
@@ -155,6 +161,46 @@ export const CollapsedPill: React.FC<CollapsedPillProps> = ({
         <span>{formatTime(focusSeconds)}</span>
       </div>
 
+      {/* Spotify Mini Playback Capsule */}
+      {spotifyTrack && onSpotifyControl && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            onSpotifyControl(spotifyTrack.isPlaying ? 'PAUSE' : 'PLAY');
+          }}
+          className="non-drag"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            fontSize: 10,
+            maxWidth: 105,
+            color: '#ffffff',
+            padding: '2px 6px',
+            borderRadius: 'var(--radius-pill)',
+            backgroundColor: spotifyTrack.isPlaying ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.06)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+          title={`${spotifyTrack.name} · ${spotifyTrack.artist} (Click to ${spotifyTrack.isPlaying ? 'pause' : 'play'})`}
+        >
+          <span style={{ fontSize: 9 }}>{spotifyTrack.isPlaying ? '⏸' : '▶'}</span>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: 75,
+            }}
+          >
+            {spotifyTrack.name}
+          </span>
+        </div>
+      )}
+
       {/* Quick Action Buttons (Non-drag) */}
       <div className="non-drag" style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
         {onMinimizeToTaskbar && (
@@ -173,6 +219,26 @@ export const CollapsedPill: React.FC<CollapsedPillProps> = ({
             title="Minimize to taskbar"
           >
             _
+          </button>
+        )}
+
+        {onDockTopRight && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDockTopRight();
+            }}
+            className="apple-btn-text"
+            style={{
+              padding: '1px 6px',
+              fontSize: 10,
+              fontWeight: 700,
+              height: 20,
+              minWidth: 20,
+            }}
+            title="Dock to top-right corner"
+          >
+            ⇗
           </button>
         )}
 

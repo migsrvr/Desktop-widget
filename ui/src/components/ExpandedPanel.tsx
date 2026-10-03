@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Task, TaskStatus, AiRun, TimelineEvent } from '@workpulse/shared';
+import { Task, TaskStatus, AiRun, TimelineEvent, SpotifyTrack, SpotifyPlaybackAction } from '@workpulse/shared';
 import { AiRunCard } from './AiRunCard';
 import { TaskList } from './TaskList';
 import { FocusTimer } from './FocusTimer';
 import { TimelineView } from './TimelineView';
+import { SpotifyPlayerCard } from './SpotifyPlayerCard';
 
 interface ExpandedPanelProps {
   tasks: Task[];
@@ -20,6 +21,8 @@ interface ExpandedPanelProps {
   focusSeconds: number;
   targetMinutes: number;
   onCollapse: () => void;
+  onDockTopRight?: () => void;
+  isDocked?: boolean;
   onMinimizeToTaskbar?: () => void;
   onToggleAlwaysOnTop: () => void;
   onToggleMute: () => void;
@@ -32,6 +35,11 @@ interface ExpandedPanelProps {
   onAddTask: (title: string, status: TaskStatus) => void;
   onClearPastTasks?: () => void;
   onOpenIde?: () => void;
+  spotifyTrack?: SpotifyTrack | null;
+  isSpotifyConnected?: boolean;
+  isSpotifyConnecting?: boolean;
+  onOpenSpotifySetup?: () => void;
+  onSpotifyControl?: (action: SpotifyPlaybackAction) => void;
 }
 
 export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
@@ -49,6 +57,8 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   focusSeconds,
   targetMinutes,
   onCollapse,
+  onDockTopRight,
+  isDocked = false,
   onMinimizeToTaskbar,
   onToggleAlwaysOnTop,
   onToggleMute,
@@ -61,6 +71,11 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   onAddTask,
   onClearPastTasks,
   onOpenIde,
+  spotifyTrack,
+  isSpotifyConnected,
+  isSpotifyConnecting,
+  onOpenSpotifySetup,
+  onSpotifyControl,
 }) => {
   const [activeTab, setActiveTab] = useState<'tasks' | 'timeline'>('tasks');
   const [currentTime, setCurrentTime] = React.useState(new Date());
@@ -97,9 +112,12 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
         boxSizing: 'border-box',
       }}
     >
-      {/* Title Header with Monotone Window Controls */}
+      {/* Title Header with Monotone Window Controls (drag to move, double-click to dock top-right) */}
       <div
+        data-tauri-drag-region
         className="titlebar-drag-region"
+        onDoubleClick={onDockTopRight}
+        title="Drag to move · Double-click to dock top-right"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -129,6 +147,15 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
 
         {/* Monotone Header Action Buttons (No bulky multi-color icons) */}
         <div className="non-drag" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          {onOpenSpotifySetup && (
+            <button
+              onClick={onOpenSpotifySetup}
+              className={`apple-btn-text ${isSpotifyConnected ? 'active' : ''}`}
+              title={isSpotifyConnected ? 'Spotify Connected (click to configure)' : 'Connect Spotify'}
+            >
+              ♫ {isSpotifyConnected ? 'Music' : 'Spotify'}
+            </button>
+          )}
           <button
             onClick={onToggleMute}
             className={`apple-btn-text ${isMuted ? '' : 'active'}`}
@@ -136,6 +163,15 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
           >
             {isMuted ? 'Muted' : 'Sound'}
           </button>
+          {onDockTopRight && (
+            <button
+              onClick={onDockTopRight}
+              className={`apple-btn-text ${isDocked ? 'active' : ''}`}
+              title={isDocked ? 'Docked top-right' : 'Dock to top-right corner'}
+            >
+              Dock
+            </button>
+          )}
           <button
             onClick={onToggleAlwaysOnTop}
             className={`apple-btn-text ${isAlwaysOnTop ? 'active' : ''}`}
@@ -193,7 +229,18 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
       </div>
 
       {/* AI Companion Card */}
-      <AiRunCard aiRun={aiRun} />
+      <AiRunCard aiRun={aiRun} timeline={timeline} />
+
+      {/* Spotify Music Card */}
+      {onOpenSpotifySetup && onSpotifyControl && (
+        <SpotifyPlayerCard
+          track={spotifyTrack ?? null}
+          isConnected={!!isSpotifyConnected}
+          isConnecting={!!isSpotifyConnecting}
+          onOpenSetup={onOpenSpotifySetup}
+          onControl={onSpotifyControl}
+        />
+      )}
 
       {/* Workload & Focus Panel */}
       <div

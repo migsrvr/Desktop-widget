@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useWorkpulseState } from './hooks/useWorkpulseState';
 import { useWebSocketBridge } from './hooks/useWebSocketBridge';
+import { useWindowMagnet } from './hooks/useWindowMagnet';
 import { CollapsedPill } from './components/CollapsedPill';
 import { ExpandedPanel } from './components/ExpandedPanel';
+import { SpotifySetupModal } from './components/SpotifySetupModal';
 
 export const App: React.FC = () => {
   const {
@@ -34,11 +36,17 @@ export const App: React.FC = () => {
     toggleTimer,
     resetTimer,
     handleIncomingIdeMessage,
+    spotify,
   } = useWorkpulseState();
+
+  const [isSpotifyModalOpen, setIsSpotifyModalOpen] = useState(false);
 
   const { isConnected, sendMessage } = useWebSocketBridge({
     onMessage: handleIncomingIdeMessage,
   });
+
+  // Sticky-note behavior: edge magnet + fling-to-dock top-right.
+  const { dockTopRight, isDocked } = useWindowMagnet(isExpanded);
 
   const [showSimMenu, setShowSimMenu] = useState(false);
 
@@ -115,6 +123,8 @@ export const App: React.FC = () => {
             focusSeconds={focusSeconds}
             targetMinutes={targetMinutes}
             onCollapse={toggleExpanded}
+            onDockTopRight={dockTopRight}
+            isDocked={isDocked}
             onMinimizeToTaskbar={minimizeToTaskbar}
             onToggleAlwaysOnTop={toggleAlwaysOnTop}
             onToggleMute={toggleMute}
@@ -127,6 +137,11 @@ export const App: React.FC = () => {
             onAddTask={addTask}
             onClearPastTasks={clearPastCompletedTasks}
             onOpenIde={handleOpenIde}
+            spotifyTrack={spotify.track}
+            isSpotifyConnected={spotify.authStatus.isConnected}
+            isSpotifyConnecting={spotify.isConnecting}
+            onOpenSpotifySetup={() => setIsSpotifyModalOpen(true)}
+            onSpotifyControl={spotify.controlPlayback}
           />
 
           {/* Monotone Telemetry & Dev Simulator Bar (Only in Expanded Flyout) */}
@@ -224,12 +239,27 @@ export const App: React.FC = () => {
           isTimerRunning={isTimerRunning}
           onExpand={toggleExpanded}
           onMinimizeToTaskbar={minimizeToTaskbar}
+          onDockTopRight={dockTopRight}
           onToggleTimer={(e) => {
             e.stopPropagation();
             toggleTimer();
           }}
+          spotifyTrack={spotify.track}
+          onSpotifyControl={spotify.controlPlayback}
         />
       )}
+
+      {/* Spotify PKCE Connection & Settings Modal */}
+      <SpotifySetupModal
+        isOpen={isSpotifyModalOpen}
+        onClose={() => setIsSpotifyModalOpen(false)}
+        isConnected={spotify.authStatus.isConnected}
+        activeClientId={spotify.authStatus.clientId}
+        isConnecting={spotify.isConnecting}
+        error={spotify.error}
+        onConnect={(clientId) => spotify.startAuth(clientId)}
+        onDisconnect={spotify.disconnect}
+      />
     </div>
   );
 };

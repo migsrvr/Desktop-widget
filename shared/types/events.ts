@@ -260,6 +260,8 @@ export function isAiWaitingInput(status: AiRunStatus): boolean {
 // Spotify Web API Integration Contracts
 // ---------------------------------------------------------------------------
 
+export const SPOTIFY_REDIRECT_URI = 'http://localhost:41789/api/spotify/callback';
+
 export interface SpotifyDevice {
   id?: string;
   name: string;
