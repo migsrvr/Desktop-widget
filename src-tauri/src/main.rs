@@ -3,6 +3,7 @@
 mod db;
 mod server;
 mod watcher;
+mod spotify;
 
 use db::{Database, TaskRecord, TimelineEventRecord};
 use std::sync::Mutex;
@@ -11,6 +12,14 @@ use tauri::{
     tray::{TrayIconBuilder, TrayIconEvent},
     AppHandle, Manager, State,
 };
+
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SpotifyStatusResponse {
+    pub is_connected: bool,
+    pub client_id: Option<String>,
+    pub track: Option<spotify::SpotifyTrackDto>,
+}
 
 struct AppState {
     db: Mutex<Database>,
@@ -72,6 +81,100 @@ fn minimize_window(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+async fn spotify_start_login(client_id: String) -> Result<String, String> {
+    let trimmed_id = client_id.trim();
+    if trimmed_id.is_empty() {
+        return Err("Spotify Client ID cannot be empty".to_string());
+    }
+    let auth_url = spotify::start_auth_session(trimmed_id.to_string());
+    #[cfg(target_os = "windows")]
+    {
+        let _ = std::process::Command::new("cmd")
+            .args(["/c", "start", "", &auth_url])
+            .spawn();
+    }
+    Ok(auth_url)
+}
+
+#[tauri::command]
+async fn spotify_get_status(state: State<'_, AppState>) -> Result<SpotifyStatusResponse, String> {
+    let auth_opt = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.get_spotify_auth().map_err(|e| e.to_string())?
+    };
+
+    let Some(mut auth) = auth_opt else {
+        return Ok(SpotifyStatusResponse {
+            is_connected: false,
+            client_id: None,
+            track: None,
+        });
+    };
+
+    let now = chrono::Utc::now().timestamp();
+    // Auto-refresh token if expired or about to expire in 60s
+    if now >= auth.expires_at - 60 && !auth.refresh_token.is_empty() {
+        if let Ok(refreshed) = spotify::refresh_access_token(&auth.client_id, &auth.refresh_token).await {
+            auth.access_token = refreshed.access_token;
+            auth.expires_at = now + refreshed.expires_in;
+            if let Some(new_refresh) = refreshed.refresh_token {
+                auth.refresh_token = new_refresh;
+            }
+            if let Ok(db) = state.db.lock() {
+                let _ = db.save_spotify_auth(&auth);
+            }
+        }
+    }
+
+    let track = spotify::fetch_current_playback(&auth.access_token).await.unwrap_or(None);
+
+    Ok(SpotifyStatusResponse {
+        is_connected: true,
+        client_id: Some(auth.client_id),
+        track,
+    })
+}
+
+#[tauri::command]
+async fn spotify_control(state: State<'_, AppState>, action: String) -> Result<(), String> {
+    let mut auth = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.get_spotify_auth()
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| "Spotify is not connected".to_string())?
+    };
+
+    let now = chrono::Utc::now().timestamp();
+    if now >= auth.expires_at - 60 && !auth.refresh_token.is_empty() {
+        if let Ok(refreshed) = spotify::refresh_access_token(&auth.client_id, &auth.refresh_token).await {
+            auth.access_token = refreshed.access_token;
+            auth.expires_at = now + refreshed.expires_in;
+            if let Some(new_refresh) = refreshed.refresh_token {
+                auth.refresh_token = new_refresh;
+            }
+            if let Ok(db) = state.db.lock() {
+                let _ = db.save_spotify_auth(&auth);
+            }
+        }
+    }
+
+    if action == "TOGGLE" {
+        let playback = spotify::fetch_current_playback(&auth.access_token).await.unwrap_or(None);
+        let is_playing = playback.map(|p| p.is_playing.0).unwrap_or(false);
+        let target_action = if is_playing { "PAUSE" } else { "PLAY" };
+        spotify::execute_player_action(&auth.access_token, target_action).await
+    } else {
+        spotify::execute_player_action(&auth.access_token, &action).await
+    }
+}
+
+#[tauri::command]
+fn spotify_disconnect(state: State<AppState>) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.delete_spotify_auth().map_err(|e| e.to_string())
+}
+
 fn main() {
     // 1. Initialize SQLite Database
     let db = Database::init().expect("Failed to initialize SQLite database");
@@ -105,7 +208,11 @@ fn main() {
             get_timeline,
             toggle_always_on_top,
             set_widget_size,
-            minimize_window
+            minimize_window,
+            spotify_start_login,
+            spotify_get_status,
+            spotify_control,
+            spotify_disconnect
         ])
         .setup(|app| {
             // Build Windows System Tray
