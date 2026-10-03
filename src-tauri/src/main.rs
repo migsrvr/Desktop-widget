@@ -274,7 +274,44 @@ fn operator_approve(state: State<AppState>, action_id: String, decision: String)
     Ok(decision_up)
 }
 
+#[cfg(target_os = "windows")]
+mod single_instance {
+    #[link(name = "kernel32")]
+    extern "system" {
+        pub fn CreateMutexW(lp_mutex_attributes: *const usize, b_initial_owner: i32, lp_name: *const u16) -> isize;
+        pub fn GetLastError() -> u32;
+    }
+    #[link(name = "user32")]
+    extern "system" {
+        pub fn FindWindowW(lp_class_name: *const u16, lp_window_name: *const u16) -> isize;
+        pub fn SetForegroundWindow(hwnd: isize) -> i32;
+        pub fn ShowWindow(hwnd: isize, n_cmd_show: i32) -> i32;
+    }
+
+    pub fn check_or_focus() -> bool {
+        let name: Vec<u16> = "WorkPulseSingleInstanceMutex\0".encode_utf16().collect();
+        let handle = unsafe { CreateMutexW(std::ptr::null(), 0, name.as_ptr()) };
+        if handle != 0 && unsafe { GetLastError() } == 183 /* ERROR_ALREADY_EXISTS */ {
+            let title: Vec<u16> = "WorkPulse\0".encode_utf16().collect();
+            let hwnd = unsafe { FindWindowW(std::ptr::null(), title.as_ptr()) };
+            if hwnd != 0 {
+                unsafe {
+                    ShowWindow(hwnd, 9 /* SW_RESTORE */);
+                    SetForegroundWindow(hwnd);
+                }
+            }
+            return false;
+        }
+        true
+    }
+}
+
 fn main() {
+    #[cfg(target_os = "windows")]
+    if !single_instance::check_or_focus() {
+        return;
+    }
+
     // 1. Initialize SQLite Database
     let db = Database::init().expect("Failed to initialize SQLite database");
     let screen = std::sync::Arc::new(screen::ScreenManager::new());
