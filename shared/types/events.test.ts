@@ -10,6 +10,11 @@ import {
   isAiActive,
   isAiWaitingInput,
   IdeToWidgetMessage,
+  SpotifyTrack,
+  SpotifyPlaybackAction,
+  SpotifyAuthStatus,
+  formatTrackDuration,
+  validateSpotifyAction,
 } from './events';
 
 describe('Domain Models & Invariants', () => {
@@ -160,5 +165,31 @@ describe('Domain Models & Invariants', () => {
     if (parsed.type === 'ide/handshake') {
       expect(parsed.payload.ideName).toBe('VS Code');
     }
+  });
+
+  it('formats track duration and validates Spotify playback actions', () => {
+    expect(formatTrackDuration(0)).toBe('00:00');
+    expect(formatTrackDuration(65000)).toBe('01:05');
+    expect(formatTrackDuration(215000)).toBe('03:35');
+
+    expect(validateSpotifyAction('PLAY')).toBe(true);
+    expect(validateSpotifyAction('PAUSE')).toBe(true);
+    expect(validateSpotifyAction('TOGGLE')).toBe(true);
+    expect(validateSpotifyAction('NEXT')).toBe(true);
+    expect(validateSpotifyAction('PREVIOUS')).toBe(true);
+    expect(validateSpotifyAction('INVALID_ACTION')).toBe(false);
+
+    const sampleTrack: SpotifyTrack = {
+      id: 'track-123',
+      name: 'Midnight City',
+      artist: 'M83',
+      album: 'Hurry Up, We\'re Dreaming',
+      durationMs: 243000,
+      progressMs: 65000,
+      isPlaying: true,
+    };
+
+    expect(sampleTrack.name).toBe('Midnight City');
+    expect(sampleTrack.isPlaying).toBe(true);
   });
 });

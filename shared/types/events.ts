@@ -248,3 +248,52 @@ export function isAiActive(status: AiRunStatus): boolean {
 export function isAiWaitingInput(status: AiRunStatus): boolean {
   return status === 'WAITING_INPUT';
 }
+
+// ---------------------------------------------------------------------------
+// Spotify Web API Integration Contracts
+// ---------------------------------------------------------------------------
+
+export interface SpotifyDevice {
+  id?: string;
+  name: string;
+  type: string;
+  volumePercent: number;
+}
+
+export interface SpotifyTrack {
+  id: string;
+  name: string;
+  artist: string;
+  album: string;
+  albumArtUrl?: string;
+  durationMs: number;
+  progressMs: number;
+  isPlaying: boolean;
+  device?: SpotifyDevice;
+}
+
+export type SpotifyPlaybackAction = 'PLAY' | 'PAUSE' | 'TOGGLE' | 'NEXT' | 'PREVIOUS';
+
+export interface SpotifyAuthStatus {
+  isConnected: boolean;
+  clientId?: string;
+  userDisplayName?: string;
+}
+
+/**
+ * Formats milliseconds into clean MM:SS format.
+ */
+export function formatTrackDuration(ms: number): string {
+  if (!ms || ms < 0) return '00:00';
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Validates a Spotify playback action.
+ */
+export function validateSpotifyAction(action: string): boolean {
+  return ['PLAY', 'PAUSE', 'TOGGLE', 'NEXT', 'PREVIOUS'].includes(action);
+}
