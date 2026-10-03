@@ -31,11 +31,11 @@
   - `SpotifyAuthStatus`: `{ isConnected: boolean, clientId?: string, userDisplayName?: string }`
   - Helper functions: `formatTrackDuration(ms: number): string`, `validateSpotifyAction(action: string): boolean`
 
-- [ ] **Step 1: Write the failing unit tests for Spotify helpers**
-- [ ] **Step 2: Run `npm test` to verify tests fail**
-- [ ] **Step 3: Implement data contracts and helpers in `shared/types/events.ts`**
-- [ ] **Step 4: Run `npm test` and `npm run --workspace=shared build` to verify tests pass**
-- [ ] **Step 5: Commit changes to git**
+- [x] **Step 1: Write the failing unit tests for Spotify helpers**
+- [x] **Step 2: Run `npm test` to verify tests fail**
+- [x] **Step 3: Implement data contracts and helpers in `shared/types/events.ts`**
+- [x] **Step 4: Run `npm test` and `npm run --workspace=shared build` to verify tests pass**
+- [x] **Step 5: Commit changes to git**
 
 ---
 
@@ -51,10 +51,10 @@
   - `Database::get_spotify_auth(&self) -> Result<Option<SpotifyAuthRecord>>`
   - `Database::delete_spotify_auth(&self) -> Result<()>`
 
-- [ ] **Step 1: Add table `spotify_auth` to SQLite initialization in `db.rs`**
-- [ ] **Step 2: Implement `save_spotify_auth`, `get_spotify_auth`, and `delete_spotify_auth` in `db.rs`**
-- [ ] **Step 3: Run `cargo check` in `src-tauri` to verify compilation**
-- [ ] **Step 4: Commit changes to git**
+- [x] **Step 1: Add table `spotify_auth` to SQLite initialization in `db.rs`**
+- [x] **Step 2: Implement `save_spotify_auth`, `get_spotify_auth`, and `delete_spotify_auth` in `db.rs`**
+- [x] **Step 3: Run `cargo check` in `src-tauri` to verify compilation**
+- [x] **Step 4: Commit changes to git**
 
 ---
 
@@ -73,12 +73,12 @@
   - `spotify_control(action: String) -> Result<(), String>`
   - `spotify_disconnect() -> Result<(), String>`
 
-- [ ] **Step 1: Add reqwest dependency to `src-tauri/Cargo.toml`**
-- [ ] **Step 2: Create `src-tauri/src/spotify.rs` with PKCE and token exchange logic**
-- [ ] **Step 3: Add Axum route `GET /api/spotify/callback` in `src-tauri/src/server.rs` to handle OAuth loopback**
-- [ ] **Step 4: Expose IPC commands in `src-tauri/src/main.rs` and register in `generate_handler!`**
-- [ ] **Step 5: Run `cargo check` in `src-tauri` to verify compilation**
-- [ ] **Step 6: Commit changes to git**
+- [x] **Step 1: Add reqwest dependency to `src-tauri/Cargo.toml`**
+- [x] **Step 2: Create `src-tauri/src/spotify.rs` with PKCE and token exchange logic**
+- [x] **Step 3: Add Axum route `GET /api/spotify/callback` in `src-tauri/src/server.rs` to handle OAuth loopback**
+- [x] **Step 4: Expose IPC commands in `src-tauri/src/main.rs` and register in `generate_handler!`**
+- [x] **Step 5: Run `cargo check` in `src-tauri` to verify compilation**
+- [x] **Step 6: Commit changes to git**
 
 ---
 
@@ -97,10 +97,10 @@
   - `controlPlayback`: `(action: SpotifyPlaybackAction) => Promise<void>`
   - `disconnect`: `() => Promise<void>`
 
-- [ ] **Step 1: Create `ui/src/hooks/useSpotifyPlayer.ts` calling Tauri IPC commands with polling (every 3s when playing)**
-- [ ] **Step 2: Connect `useSpotifyPlayer` into `useWorkpulseState.ts`**
-- [ ] **Step 3: Run `npm run --workspace=ui build` to verify type safety**
-- [ ] **Step 4: Commit changes to git**
+- [x] **Step 1: Create `ui/src/hooks/useSpotifyPlayer.ts` calling Tauri IPC commands with polling (every 3s when playing)**
+- [x] **Step 2: Connect `useSpotifyPlayer` into `useWorkpulseState.ts`**
+- [x] **Step 3: Run `npm run --workspace=ui build` to verify type safety**
+- [x] **Step 4: Commit changes to git**
 
 ---
 
@@ -116,12 +116,12 @@
 - Consumes:
   - `track`, `authStatus`, `controlPlayback`, `startAuth`, `disconnect` from `useSpotifyPlayer`
 
-- [ ] **Step 1: Build `ui/src/components/SpotifyPlayerCard.tsx` with luxury monotone acrylic card, album squircle, progress bar, and Apple-style playback buttons**
-- [ ] **Step 2: Build `ui/src/components/SpotifySetupModal.tsx` with Client ID input, copyable redirect URI, and 1-click connect button**
-- [ ] **Step 3: Embed `SpotifyPlayerCard` and setup modal trigger into `ExpandedPanel.tsx`**
-- [ ] **Step 4: Integrate track marquee & mini playback toggle into `CollapsedPill.tsx`**
-- [ ] **Step 5: Run `npm run --workspace=ui build` and `npm test` to verify zero errors**
-- [ ] **Step 6: Commit changes to git**
+- [x] **Step 1: Build `ui/src/components/SpotifyPlayerCard.tsx` with luxury monotone acrylic card, album squircle, progress bar, and Apple-style playback buttons**
+- [x] **Step 2: Build `ui/src/components/SpotifySetupModal.tsx` with Client ID input, copyable redirect URI, and 1-click connect button**
+- [x] **Step 3: Embed `SpotifyPlayerCard` and setup modal trigger into `ExpandedPanel.tsx`**
+- [x] **Step 4: Integrate track marquee & mini playback toggle into `CollapsedPill.tsx`**
+- [x] **Step 5: Run `npm run --workspace=ui build` and `npm test` to verify zero errors**
+- [x] **Step 6: Commit changes to git**
 
 ---
 
@@ -131,8 +131,8 @@
 - Target: `src-tauri/target/release/workpulse.exe`
 - Target: `src-tauri/target/release/bundle/nsis/WorkPulse_0.1.0_x64-setup.exe`
 
-- [ ] **Step 1: Run full Vitest test suite (`npm test`)**
-- [ ] **Step 2: Run frontend production bundle (`npm run --workspace=ui build`)**
-- [ ] **Step 3: Run Rust release compiler (`npm run tauri build`)**
-- [ ] **Step 4: Verify generated `.exe` size, low memory (< 35MB), and desktop shortcut**
-- [ ] **Step 5: Final git commit and delivery to user**
+- [x] **Step 1: Run full Vitest test suite (`npm test`)**
+- [x] **Step 2: Run frontend production bundle (`npm run --workspace=ui build`)**
+- [x] **Step 3: Run Rust release compiler (`npm run tauri build`)**
+- [x] **Step 4: Verify generated `.exe` size, low memory (< 35MB), and desktop shortcut**
+- [x] **Step 5: Final git commit and delivery to user**
