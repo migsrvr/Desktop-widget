@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Task, TaskStatus, AiRun, TimelineEvent, SpotifyTrack, SpotifyPlaybackAction } from '@workpulse/shared';
+import { Task, TaskStatus, AiRun, TimelineEvent, SpotifyTrack, SpotifyPlaybackAction, ScreenMode, ScreenFrameMeta, VisionInference, OperatorActionProposal } from '@workpulse/shared';
 import { AiRunCard } from './AiRunCard';
 import { TaskList } from './TaskList';
 import { FocusTimer } from './FocusTimer';
 import { TimelineView } from './TimelineView';
 import { SpotifyPlayerCard } from './SpotifyPlayerCard';
+import { OperatorCard } from './OperatorCard';
 
 interface ExpandedPanelProps {
   tasks: Task[];
@@ -35,11 +36,23 @@ interface ExpandedPanelProps {
   onAddTask: (title: string, status: TaskStatus) => void;
   onClearPastTasks?: () => void;
   onOpenIde?: () => void;
+  isBridgeConnected?: boolean;
   spotifyTrack?: SpotifyTrack | null;
   isSpotifyConnected?: boolean;
   isSpotifyConnecting?: boolean;
   onOpenSpotifySetup?: () => void;
   onSpotifyControl?: (action: SpotifyPlaybackAction) => void;
+  operatorWatching?: boolean;
+  operatorMode?: ScreenMode;
+  operatorFrame?: ScreenFrameMeta | null;
+  operatorInference?: VisionInference | null;
+  operatorProposal?: OperatorActionProposal | null;
+  operatorThumbUrl?: string;
+  onToggleOperatorWatching?: () => void;
+  onOperatorModeChange?: (mode: ScreenMode) => void;
+  onOperatorCapture?: () => void;
+  onOperatorApprove?: () => void;
+  onOperatorDeny?: () => void;
 }
 
 export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
@@ -59,7 +72,6 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   onCollapse,
   onDockTopRight,
   isDocked = false,
-  onMinimizeToTaskbar,
   onToggleAlwaysOnTop,
   onToggleMute,
   onToggleTimer,
@@ -71,11 +83,23 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   onAddTask,
   onClearPastTasks,
   onOpenIde,
+  isBridgeConnected = false,
   spotifyTrack,
   isSpotifyConnected,
   isSpotifyConnecting,
   onOpenSpotifySetup,
   onSpotifyControl,
+  operatorWatching,
+  operatorMode,
+  operatorFrame,
+  operatorInference,
+  operatorProposal,
+  operatorThumbUrl,
+  onToggleOperatorWatching,
+  onOperatorModeChange,
+  onOperatorCapture,
+  onOperatorApprove,
+  onOperatorDeny,
 }) => {
   const [activeTab, setActiveTab] = useState<'tasks' | 'timeline'>('tasks');
   const [currentTime, setCurrentTime] = React.useState(new Date());
@@ -104,11 +128,11 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
       className="w11-acrylic-panel"
       style={{
         width: '100%',
-        maxWidth: 360,
-        padding: '14px',
+        maxWidth: 400,
+        padding: '16px',
         display: 'flex',
         flexDirection: 'column',
-        gap: 12,
+        gap: 14,
         boxSizing: 'border-box',
       }}
     >
@@ -125,7 +149,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
           cursor: 'grab',
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flexShrink: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: '-0.3px', color: '#ffffff' }}>
               WorkPulse
@@ -135,27 +159,28 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
                 fontSize: 11,
                 fontFamily: 'JetBrains Mono, monospace',
                 color: 'var(--text-tertiary)',
+                whiteSpace: 'nowrap',
               }}
             >
               {timeStr}
             </span>
           </div>
-          <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }}>
+          <span
+            style={{
+              fontSize: 11,
+              color: 'var(--text-secondary)',
+              marginTop: 1,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
             {fullDateStr}
           </span>
         </div>
 
         {/* Monotone Header Action Buttons (No bulky multi-color icons) */}
-        <div className="non-drag" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          {onOpenSpotifySetup && (
-            <button
-              onClick={onOpenSpotifySetup}
-              className={`apple-btn-text ${isSpotifyConnected ? 'active' : ''}`}
-              title={isSpotifyConnected ? 'Spotify Connected (click to configure)' : 'Connect Spotify'}
-            >
-              ♫ {isSpotifyConnected ? 'Music' : 'Spotify'}
-            </button>
-          )}
+        <div className="non-drag" style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
           <button
             onClick={onToggleMute}
             className={`apple-btn-text ${isMuted ? '' : 'active'}`}
@@ -179,16 +204,6 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
           >
             Pin
           </button>
-          {onMinimizeToTaskbar && (
-            <button
-              onClick={onMinimizeToTaskbar}
-              className="apple-btn-text"
-              style={{ padding: '3px 6px', fontSize: 10 }}
-              title="Minimize to taskbar"
-            >
-              _
-            </button>
-          )}
           <button
             onClick={onCollapse}
             className="apple-btn-text"
@@ -200,17 +215,27 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
         </div>
       </div>
 
-      {/* Monotone Progress Bar */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 600 }}>
-          <span style={{ color: 'var(--text-secondary)' }}>Today’s Workload</span>
-          <span style={{ color: '#ffffff', fontFamily: 'JetBrains Mono, SF Mono, monospace' }}>
+      {/* Workload Section */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.2px', color: '#ffffff' }}>
+            Today’s Workload
+          </span>
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: '#ffffff',
+              fontFamily: 'JetBrains Mono, SF Mono, monospace',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
             {completionPercentage}%
           </span>
         </div>
         <div
           style={{
-            height: 4,
+            height: 6,
             borderRadius: 'var(--radius-pill)',
             backgroundColor: 'rgba(255, 255, 255, 0.08)',
             overflow: 'hidden',
@@ -230,6 +255,23 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
 
       {/* AI Companion Card */}
       <AiRunCard aiRun={aiRun} timeline={timeline} />
+
+      {/* Screen Operator Card */}
+      {onToggleOperatorWatching && operatorMode && (
+        <OperatorCard
+          watching={!!operatorWatching}
+          mode={operatorMode}
+          lastFrame={operatorFrame ?? null}
+          inference={operatorInference ?? null}
+          proposal={operatorProposal ?? null}
+          thumbUrl={operatorThumbUrl ?? ''}
+          onToggleWatching={onToggleOperatorWatching}
+          onModeChange={onOperatorModeChange ?? (() => {})}
+          onCaptureNow={onOperatorCapture ?? (() => {})}
+          onApprove={onOperatorApprove ?? (() => {})}
+          onDeny={onOperatorDeny ?? (() => {})}
+        />
+      )}
 
       {/* Spotify Music Card */}
       {onOpenSpotifySetup && onSpotifyControl && (
@@ -305,18 +347,21 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
           paddingRight: 2,
         }}
       >
-        <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-tertiary)' }}>
+          <span
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: '50%',
+              backgroundColor: isBridgeConnected ? '#ffffff' : 'rgba(255, 255, 255, 0.3)',
+              display: 'inline-block',
+            }}
+            title={isBridgeConnected ? 'IDE bridge online' : 'IDE bridge offline'}
+          />
           {doneCount} done · {remainingCount} remaining
         </span>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <button
-            onClick={() => onAddTask('New Task', 'NOW')}
-            className="apple-btn-text"
-            title="Add immediate task"
-          >
-            + Task
-          </button>
           <button
             onClick={onOpenIde}
             className="apple-btn-text"

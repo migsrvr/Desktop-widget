@@ -51,6 +51,22 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Selection, caret, and focus carry the same monochrome world */
+::selection {
+  background: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+}
+
+input, textarea {
+  caret-color: #ffffff;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.45);
+  outline-offset: 2px;
+}
+
 /* Custom Minimal Scrollbar */
 ::-webkit-scrollbar {
   width: 3px;

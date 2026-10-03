@@ -1,6 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod db;
+mod operator;
+mod screen;
 mod server;
 mod watcher;
 mod spotify;
@@ -23,6 +25,7 @@ pub struct SpotifyStatusResponse {
 
 struct AppState {
     db: Mutex<Database>,
+    screen: std::sync::Arc<screen::ScreenManager>,
 }
 
 #[tauri::command]
@@ -175,15 +178,78 @@ fn spotify_disconnect(state: State<AppState>) -> Result<(), String> {
     db.delete_spotify_auth().map_err(|e| e.to_string())
 }
 
+// ---- Screen operator IPC (thin wrappers over ScreenManager + db) ----
+
+#[tauri::command]
+fn get_screen_status(state: State<AppState>) -> Result<screen::ScreenStatus, String> {
+    Ok(state.screen.status())
+}
+
+#[tauri::command]
+fn toggle_watching(state: State<AppState>, watching: bool, mode: Option<String>) -> Result<screen::ScreenStatus, String> {
+    let mode_str = mode.unwrap_or_else(|| "MONITOR".to_string());
+    let status = state.screen.set_watching(watching, &mode_str);
+    if let Ok(db) = Database::init() {
+        if watching {
+            if let Some(sess) = status.session_id.clone() {
+                let _ = db.create_screen_session(&sess, &status.mode);
+            }
+        } else if let Some(sess) = state.screen.session_id() {
+            // session already cleared in manager; best-effort close of last known
+            let _ = sess;
+        }
+    }
+    Ok(status)
+}
+
+#[tauri::command]
+fn capture_now(
+    state: State<AppState>,
+    window_title: Option<String>,
+    app_name: Option<String>,
+) -> Result<screen::ScreenFrameMeta, String> {
+    let (meta, _jpeg, _dedupe) = state.screen.capture_now(window_title.clone(), app_name.clone());
+    if let Ok(db) = Database::init() {
+        if let Some(sess) = state.screen.session_id() {
+            let _ = db.create_screen_session(&sess, "MONITOR");
+            let _ = db.insert_frame(
+                &meta.frame_id,
+                &sess,
+                window_title.as_deref(),
+                app_name.as_deref(),
+                meta.width as i64,
+                meta.height as i64,
+                &meta.hash,
+            );
+        }
+    }
+    Ok(meta)
+}
+
+#[tauri::command]
+fn operator_approve(state: State<AppState>, action_id: String, decision: String) -> Result<String, String> {
+    let decision_up = decision.to_uppercase();
+    if decision_up != "APPROVED" && decision_up != "DENIED" {
+        return Err("decision must be APPROVED or DENIED".to_string());
+    }
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.decide_action(&action_id, &decision_up, false)
+        .map_err(|e| e.to_string())?;
+    Ok(decision_up)
+}
+
 fn main() {
     // 1. Initialize SQLite Database
     let db = Database::init().expect("Failed to initialize SQLite database");
+    let screen = std::sync::Arc::new(screen::ScreenManager::new());
+    let screen_for_server = screen.clone();
     let state = AppState {
         db: Mutex::new(db),
+        screen,
     };
 
     // 2. Spawn embedded Tokio WebSocket/HTTP server & native Antigravity transcript watcher
-    std::thread::spawn(|| {
+    std::thread::spawn(move || {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let (tx, _rx) = tokio::sync::broadcast::channel::<String>(100);
@@ -191,7 +257,7 @@ fn main() {
             // Automatically watch Antigravity IDE transcript logs and broadcast real-time actions
             watcher::start_transcript_watcher(tx.clone());
 
-            if let Err(e) = server::start_server_with_channel(41789, tx).await {
+            if let Err(e) = server::start_server_with_screen(41789, tx, screen_for_server).await {
                 eprintln!("[WorkPulse] Server error: {}", e);
             }
         });
@@ -212,7 +278,11 @@ fn main() {
             spotify_start_login,
             spotify_get_status,
             spotify_control,
-            spotify_disconnect
+            spotify_disconnect,
+            get_screen_status,
+            toggle_watching,
+            capture_now,
+            operator_approve
         ])
         .setup(|app| {
             // Build Windows System Tray

@@ -128,25 +128,26 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
       ? Math.min(100, Math.max(0, (track.progressMs / track.durationMs) * 100))
       : 0;
 
+  // Compact single-row card: artwork, track, times, inline transport.
   return (
     <div
       className="w11-card"
       style={{
-        padding: '10px 12px',
+        padding: '8px 10px 0',
         display: 'flex',
         flexDirection: 'column',
-        gap: 8,
+        gap: 0,
+        overflow: 'hidden',
       }}
     >
-      {/* Top Track & Album Info */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, paddingBottom: 8 }}>
         {track.albumArtUrl ? (
           <img
             src={track.albumArtUrl}
             alt={track.album}
             style={{
-              width: 38,
-              height: 38,
+              width: 32,
+              height: 32,
               borderRadius: 'var(--radius-sm)',
               objectFit: 'cover',
               border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -156,14 +157,14 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
         ) : (
           <div
             style={{
-              width: 38,
-              height: 38,
+              width: 32,
+              height: 32,
               borderRadius: 'var(--radius-sm)',
               backgroundColor: 'rgba(255, 255, 255, 0.08)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 15,
+              fontSize: 13,
               color: '#ffffff',
               flexShrink: 0,
             }}
@@ -182,134 +183,86 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
             }}
-            title={track.name}
+            title={track.device ? `${track.name} · via ${track.device.name}` : track.name}
           >
             {track.name}
           </span>
           <span
             style={{
-              fontSize: 11,
+              fontSize: 10,
               color: 'var(--text-secondary)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
+              fontFamily: 'JetBrains Mono, SF Mono, monospace',
+              fontVariantNumeric: 'tabular-nums',
             }}
             title={`${track.artist} · ${track.album}`}
           >
-            {track.artist}
+            {track.artist} · {formatTrackDuration(track.progressMs)}/{formatTrackDuration(track.durationMs)}
           </span>
-          {track.device && (
-            <span
-              style={{
-                fontSize: 9,
-                color: 'var(--text-tertiary)',
-                marginTop: 1,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              via {track.device.name}
-            </span>
-          )}
         </div>
 
-        <button
-          onClick={onOpenSetup}
-          className="apple-btn-text"
-          style={{ padding: '3px 6px', fontSize: 10 }}
-          title="Spotify Settings"
-        >
-          ⚙
-        </button>
-      </div>
-
-      {/* Progress Track */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span
-          style={{
-            fontSize: 9,
-            fontFamily: 'JetBrains Mono, monospace',
-            color: 'var(--text-tertiary)',
-            minWidth: 28,
-          }}
-        >
-          {formatTrackDuration(track.progressMs)}
-        </span>
-
-        <div
-          style={{
-            flex: 1,
-            height: 3,
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: 'var(--radius-pill)',
-            overflow: 'hidden',
-          }}
-        >
-          <div
+        {/* Inline transport */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+          <button
+            onClick={() => onControl('PREVIOUS')}
+            className="apple-btn-text"
+            style={{ padding: '3px 7px', fontSize: 11 }}
+            title="Previous Track"
+          >
+            ⏮
+          </button>
+          <button
+            onClick={() => onControl(track.isPlaying ? 'PAUSE' : 'PLAY')}
+            className="apple-btn-text"
             style={{
-              height: '100%',
-              width: `${progressPercent}%`,
-              backgroundColor: '#ffffff',
-              borderRadius: 'var(--radius-pill)',
-              transition: 'width 0.4s linear',
+              padding: '3px 9px',
+              fontSize: 11,
+              color: '#ffffff',
+              backgroundColor: 'rgba(255, 255, 255, 0.14)',
+              borderColor: 'rgba(255, 255, 255, 0.2)',
             }}
-          />
+            title={track.isPlaying ? 'Pause' : 'Play'}
+          >
+            {track.isPlaying ? '⏸' : '▶'}
+          </button>
+          <button
+            onClick={() => onControl('NEXT')}
+            className="apple-btn-text"
+            style={{ padding: '3px 7px', fontSize: 11 }}
+            title="Next Track"
+          >
+            ⏭
+          </button>
+          <button
+            onClick={onOpenSetup}
+            className="apple-btn-text"
+            style={{ padding: '3px 6px', fontSize: 10 }}
+            title="Spotify Settings"
+          >
+            ⚙
+          </button>
         </div>
-
-        <span
-          style={{
-            fontSize: 9,
-            fontFamily: 'JetBrains Mono, monospace',
-            color: 'var(--text-tertiary)',
-            minWidth: 28,
-            textAlign: 'right',
-          }}
-        >
-          {formatTrackDuration(track.durationMs)}
-        </span>
       </div>
 
-      {/* Tactile Monotone Playback Controls */}
+      {/* Slim progress strip pinned to the card edge */}
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 12,
-          paddingTop: 2,
+          height: 2,
+          margin: '0 -10px',
+          backgroundColor: 'rgba(255, 255, 255, 0.08)',
+          overflow: 'hidden',
         }}
       >
-        <button
-          onClick={() => onControl('PREVIOUS')}
-          className="apple-btn-text"
-          style={{ padding: '4px 10px', fontSize: 12 }}
-          title="Previous Track"
-        >
-          ⏮
-        </button>
-
-        <button
-          onClick={() => onControl(track.isPlaying ? 'PAUSE' : 'PLAY')}
-          className="apple-btn-primary"
+        <div
           style={{
-            padding: '5px 16px',
-            fontSize: 12,
-            minWidth: 42,
+            height: '100%',
+            width: `${progressPercent}%`,
+            backgroundColor: '#ffffff',
+            transition: 'width 0.4s linear',
           }}
-          title={track.isPlaying ? 'Pause' : 'Play'}
-        >
-          {track.isPlaying ? '⏸' : '▶'}
-        </button>
-
-        <button
-          onClick={() => onControl('NEXT')}
-          className="apple-btn-text"
-          style={{ padding: '4px 10px', fontSize: 12 }}
-          title="Next Track"
-        >
-          ⏭
-        </button>
+        />
       </div>
     </div>
   );

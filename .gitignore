@@ -17,6 +17,8 @@ out/
 .env
 .env.local
 *.log
+*.db
+*.sqlite
 
 # OS files
 .DS_Store

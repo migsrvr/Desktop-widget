@@ -283,7 +283,7 @@ export function useWorkpulseState() {
   useEffect(() => {
     if (isTauri()) {
       if (isExpanded) {
-        invoke('set_widget_size', { width: 380, height: 600 }).catch(() => {});
+        invoke('set_widget_size', { width: 420, height: 640 }).catch(() => {});
       } else {
         invoke('set_widget_size', { width: 345, height: 48 }).catch(() => {});
       }
@@ -542,6 +542,69 @@ export function useWorkpulseState() {
       }
       case 'spotify/auth_success': {
         spotify.handleAuthSuccess(msg.payload.clientId);
+        break;
+      }
+      case 'screen/observed': {
+        setTimeline((prev) => [
+          {
+            id: 'evt-' + Date.now(),
+            dayPlanDate: getTodayDateStr(),
+            eventType: 'SCREEN_OBSERVED',
+            summary: `Screen observed · ${(msg.payload.width || 0)}x${msg.payload.height || 0}`,
+            metadata: { frameId: msg.payload.frameId },
+            timestamp: new Date().toISOString(),
+          },
+          ...prev.slice(0, 49),
+        ]);
+        break;
+      }
+      case 'ai/vision_update': {
+        const confident = msg.payload.confidence >= 0.75;
+        setAiRun((prev) => {
+          const mapped = msg.payload.state === 'STUCK' || msg.payload.state === 'ERROR' ? 'WAITING_INPUT' : 'WORKING';
+          if (!prev) {
+            return {
+              id: 'vision-' + Date.now(),
+              agentName: 'Screen Vision',
+              status: mapped,
+              currentStepDescription: msg.payload.summary,
+              filesModifiedCount: 0,
+              modifiedFiles: [],
+              testStatus: 'NOT_RUN',
+              startedAt: new Date().toISOString(),
+            };
+          }
+          return { ...prev, status: confident ? mapped : prev.status, currentStepDescription: msg.payload.summary };
+        });
+        if (msg.payload.state === 'STUCK' || msg.payload.state === 'ERROR') {
+          haptics.agentAlertChime();
+        }
+        setTimeline((prev) => [
+          {
+            id: 'evt-' + Date.now(),
+            dayPlanDate: getTodayDateStr(),
+            eventType: 'VISION_INFERENCE',
+            summary: `Vision ${msg.payload.state.toLowerCase()} (${Math.round(msg.payload.confidence * 100)}%) · ${msg.payload.summary}`,
+            metadata: { inferenceId: msg.payload.inferenceId, confidence: msg.payload.confidence },
+            timestamp: new Date().toISOString(),
+          },
+          ...prev.slice(0, 49),
+        ]);
+        break;
+      }
+      case 'agent/action_proposed': {
+        setAiRun((prev) => (prev ? { ...prev, status: 'WAITING_INPUT' } : prev));
+        haptics.agentAlertChime();
+        setTimeline((prev) => [
+          {
+            id: 'evt-' + Date.now(),
+            dayPlanDate: getTodayDateStr(),
+            eventType: 'ACTION_PROPOSED',
+            summary: `Operator proposed ${msg.payload.tool}: ${msg.payload.prompt}`,
+            timestamp: new Date().toISOString(),
+          },
+          ...prev.slice(0, 49),
+        ]);
         break;
       }
     }

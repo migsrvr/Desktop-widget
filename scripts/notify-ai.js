@@ -7,6 +7,9 @@
  * Usage:
  *   node scripts/notify-ai.js start "Gemini 3.8 Flash" "Analyzing architecture"
  *   node scripts/notify-ai.js update "Executing unit tests" 2 4
+ *   node scripts/notify-ai.js files src/db/schema.sql src/api/index.ts
+ *   node scripts/notify-ai.js tests passed "12 passed, 0 failed"
+ *   node scripts/notify-ai.js tests running "vitest run"
  *   node scripts/notify-ai.js waiting "Approve file modification"
  *   node scripts/notify-ai.js done "Successfully implemented feature"
  *   node scripts/notify-ai.js add-task "My new task title"
@@ -17,7 +20,7 @@ const http = require('http');
 const [,, command, arg1, arg2, arg3, arg4] = process.argv;
 
 if (!command) {
-  console.log('Usage: node notify-ai.js <start|update|waiting|done|add-task> [...]');
+  console.log('Usage: node notify-ai.js <start|update|files|tests|waiting|done|add-task> [...]');
   process.exit(0);
 }
 
@@ -77,6 +80,39 @@ switch (command) {
         stepDescription: stepDesc,
         currentStep,
         totalSteps,
+      },
+    });
+    break;
+  }
+  case 'files': {
+    // node scripts/notify-ai.js files <path1> <path2> ...
+    const rawArgs = process.argv.slice(3).filter(Boolean);
+    if (rawArgs.length === 0) {
+      console.error('Error: at least one file path required for files command');
+      process.exit(1);
+    }
+    sendHttp('/api/ai/event', {
+      type: 'ai/files_changed',
+      payload: {
+        runId: 'active-run',
+        filePaths: rawArgs,
+      },
+    });
+    break;
+  }
+  case 'tests': {
+    // node scripts/notify-ai.js tests <running|passed|failed> [summary...]
+    const statusRaw = (arg1 || 'running').toUpperCase();
+    const status = statusRaw === 'PASSED' || statusRaw === 'PASS' ? 'PASSED'
+      : statusRaw === 'FAILED' || statusRaw === 'FAIL' ? 'FAILED'
+      : 'RUNNING';
+    const summary = [arg2, arg3, arg4].filter(Boolean).join(' ') || undefined;
+    sendHttp('/api/ai/event', {
+      type: 'ai/tests_result',
+      payload: {
+        runId: 'active-run',
+        status,
+        summary,
       },
     });
     break;

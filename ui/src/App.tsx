@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useWorkpulseState } from './hooks/useWorkpulseState';
 import { useWebSocketBridge } from './hooks/useWebSocketBridge';
 import { useWindowMagnet } from './hooks/useWindowMagnet';
+import { useOperator } from './hooks/useOperator';
 import { CollapsedPill } from './components/CollapsedPill';
 import { ExpandedPanel } from './components/ExpandedPanel';
 import { SpotifySetupModal } from './components/SpotifySetupModal';
@@ -41,8 +42,18 @@ export const App: React.FC = () => {
 
   const [isSpotifyModalOpen, setIsSpotifyModalOpen] = useState(false);
 
+  const operator = useOperator();
+
+  const handleBridgeMessage = useCallback(
+    (msg: Parameters<typeof handleIncomingIdeMessage>[0]) => {
+      handleIncomingIdeMessage(msg);
+      operator.handleOperatorMessage(msg);
+    },
+    [handleIncomingIdeMessage, operator]
+  );
+
   const { isConnected, sendMessage } = useWebSocketBridge({
-    onMessage: handleIncomingIdeMessage,
+    onMessage: handleBridgeMessage,
   });
 
   // Sticky-note behavior: edge magnet + fling-to-dock top-right.
@@ -51,7 +62,7 @@ export const App: React.FC = () => {
   const [showSimMenu, setShowSimMenu] = useState(false);
 
   const handleSimulateAiStart = () => {
-    handleIncomingIdeMessage({
+    handleBridgeMessage({
       type: 'ai/run_started',
       payload: {
         runId: 'sim-' + Date.now(),
@@ -62,7 +73,7 @@ export const App: React.FC = () => {
   };
 
   const handleSimulateAiWaiting = () => {
-    handleIncomingIdeMessage({
+    handleBridgeMessage({
       type: 'ai/waiting_input',
       payload: {
         runId: 'sim-' + Date.now(),
@@ -73,12 +84,38 @@ export const App: React.FC = () => {
   };
 
   const handleSimulateAiDone = () => {
-    handleIncomingIdeMessage({
+    handleBridgeMessage({
       type: 'ai/run_finished',
       payload: {
         runId: 'sim-' + Date.now(),
         status: 'COMPLETED',
         summary: 'All tasks and tests verified successfully',
+      },
+    });
+  };
+
+  const handleSimulateVision = () => {
+    handleBridgeMessage({
+      type: 'ai/vision_update',
+      payload: {
+        inferenceId: 'inf-sim-' + Date.now(),
+        frameId: 'frame-sim',
+        provider: 'mock',
+        state: 'ERROR',
+        confidence: 0.91,
+        summary: 'Build error overlay blocking progress',
+        createdAt: new Date().toISOString(),
+      },
+    });
+    handleBridgeMessage({
+      type: 'agent/action_proposed',
+      payload: {
+        actionId: 'act-sim-' + Date.now(),
+        tool: 'hotkey',
+        args: { keys: 'ctrl+`' },
+        prompt: 'Open terminal to inspect build error?',
+        status: 'PROPOSED',
+        createdAt: new Date().toISOString(),
       },
     });
   };
@@ -137,14 +174,27 @@ export const App: React.FC = () => {
             onAddTask={addTask}
             onClearPastTasks={clearPastCompletedTasks}
             onOpenIde={handleOpenIde}
+            isBridgeConnected={isConnected}
             spotifyTrack={spotify.track}
             isSpotifyConnected={spotify.authStatus.isConnected}
             isSpotifyConnecting={spotify.isConnecting}
             onOpenSpotifySetup={() => setIsSpotifyModalOpen(true)}
             onSpotifyControl={spotify.controlPlayback}
+            operatorWatching={operator.watching}
+            operatorMode={operator.mode}
+            operatorFrame={operator.lastFrame}
+            operatorInference={operator.inference}
+            operatorProposal={operator.proposal}
+            operatorThumbUrl={operator.thumbUrl}
+            onToggleOperatorWatching={() => operator.toggleWatching()}
+            onOperatorModeChange={operator.setMode}
+            onOperatorCapture={operator.captureNow}
+            onOperatorApprove={operator.approve}
+            onOperatorDeny={operator.deny}
           />
 
-          {/* Monotone Telemetry & Dev Simulator Bar (Only in Expanded Flyout) */}
+          {/* Dev-only telemetry simulator — stripped from production builds */}
+          {import.meta.env.DEV && (
           <div
             style={{
               marginTop: 6,
@@ -225,9 +275,17 @@ export const App: React.FC = () => {
                 >
                   Done
                 </button>
+                <button
+                  onClick={handleSimulateVision}
+                  className="apple-btn-text"
+                  style={{ fontSize: 9, padding: '2px 6px' }}
+                >
+                  Vision
+                </button>
               </div>
             )}
           </div>
+          )}
         </>
       ) : (
         <CollapsedPill
@@ -246,6 +304,7 @@ export const App: React.FC = () => {
           }}
           spotifyTrack={spotify.track}
           onSpotifyControl={spotify.controlPlayback}
+          operatorWatching={operator.watching}
         />
       )}
 

@@ -1,0 +1,15 @@
+{
+  "name": "workpulse-openclaw-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WorkPulse <-> OpenClaw operator bridge over ws://127.0.0.1:41789/ws",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test test/bridge.test.js"
+  },
+  "dependencies": {
+    "ws": "^8.17.0"
+  },
+  "engines": { "node": ">=18" }
+}

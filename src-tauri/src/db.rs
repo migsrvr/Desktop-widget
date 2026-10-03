@@ -54,6 +54,29 @@ pub struct SpotifyAuthRecord {
     pub expires_at: i64,
 }
 
+#[allow(dead_code)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ScreenSessionRecord {
+    pub id: String,
+    pub mode: String,
+    pub consent_granted: i32,
+    pub started_at: String,
+    pub ended_at: Option<String>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct OperatorActionRecord {
+    pub id: String,
+    pub inference_id: Option<String>,
+    pub task_id: Option<String>,
+    pub tool_name: String,
+    pub args_json: String,
+    pub status: String,
+    pub created_at: String,
+    pub executed_at: Option<String>,
+}
+
 pub struct Database {
     db_path: PathBuf,
 }
@@ -122,6 +145,55 @@ impl Database {
                 access_token TEXT NOT NULL,
                 refresh_token TEXT NOT NULL,
                 expires_at INTEGER NOT NULL,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS screen_sessions (
+                id TEXT PRIMARY KEY,
+                mode TEXT NOT NULL,
+                consent_granted INTEGER NOT NULL DEFAULT 1,
+                started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                ended_at DATETIME
+            );
+
+            CREATE TABLE IF NOT EXISTS screen_frames (
+                id TEXT PRIMARY KEY,
+                session_id TEXT REFERENCES screen_sessions(id) ON DELETE CASCADE,
+                window_title TEXT,
+                app_name TEXT,
+                width INTEGER,
+                height INTEGER,
+                hash TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS vision_inferences (
+                id TEXT PRIMARY KEY,
+                frame_id TEXT REFERENCES screen_frames(id) ON DELETE CASCADE,
+                provider TEXT NOT NULL,
+                inferred_state TEXT NOT NULL,
+                confidence REAL NOT NULL,
+                summary TEXT,
+                raw_json TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS operator_actions (
+                id TEXT PRIMARY KEY,
+                inference_id TEXT REFERENCES vision_inferences(id) ON DELETE SET NULL,
+                task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
+                tool_name TEXT NOT NULL,
+                args_json TEXT NOT NULL,
+                status TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                executed_at DATETIME
+            );
+
+            CREATE TABLE IF NOT EXISTS ai_provider_config (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                provider TEXT NOT NULL,
+                api_key_ref TEXT NOT NULL,
+                model TEXT,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             ",
@@ -282,6 +354,119 @@ impl Database {
     pub fn delete_spotify_auth(&self) -> Result<()> {
         let conn = self.get_conn()?;
         conn.execute("DELETE FROM spotify_auth WHERE id = 1", [])?;
+        Ok(())
+    }
+
+    // ---- Screen operator persistence (audit trail, no pixels stored) ----
+
+    #[allow(dead_code)]
+    pub fn create_screen_session(&self, id: &str, mode: &str) -> Result<()> {
+        let conn = self.get_conn()?;
+        conn.execute(
+            "INSERT INTO screen_sessions (id, mode, consent_granted) VALUES (?1, ?2, 1)
+             ON CONFLICT(id) DO NOTHING",
+            params![id, mode],
+        )?;
+        Ok(())
+    }
+
+    #[allow(dead_code)]
+    pub fn end_screen_session(&self, id: &str) -> Result<()> {
+        let conn = self.get_conn()?;
+        conn.execute(
+            "UPDATE screen_sessions SET ended_at = CURRENT_TIMESTAMP WHERE id = ?1",
+            params![id],
+        )?;
+        Ok(())
+    }
+
+    #[allow(dead_code)]
+    pub fn insert_frame(
+        &self,
+        id: &str,
+        session_id: &str,
+        window_title: Option<&str>,
+        app_name: Option<&str>,
+        width: i64,
+        height: i64,
+        hash: &str,
+    ) -> Result<()> {
+        let conn = self.get_conn()?;
+        conn.execute(
+            "INSERT INTO screen_frames (id, session_id, window_title, app_name, width, height, hash)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) ON CONFLICT(id) DO NOTHING",
+            params![id, session_id, window_title, app_name, width, height, hash],
+        )?;
+        Ok(())
+    }
+
+    #[allow(dead_code)]
+    pub fn insert_inference(
+        &self,
+        id: &str,
+        frame_id: &str,
+        provider: &str,
+        state: &str,
+        confidence: f64,
+        summary: Option<&str>,
+        raw_json: Option<&str>,
+    ) -> Result<()> {
+        let conn = self.get_conn()?;
+        conn.execute(
+            "INSERT INTO vision_inferences (id, frame_id, provider, inferred_state, confidence, summary, raw_json)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) ON CONFLICT(id) DO NOTHING",
+            params![id, frame_id, provider, state, confidence, summary, raw_json],
+        )?;
+        Ok(())
+    }
+
+    #[allow(dead_code)]
+    pub fn propose_action(
+        &self,
+        id: &str,
+        inference_id: Option<&str>,
+        task_id: Option<&str>,
+        tool_name: &str,
+        args_json: &str,
+    ) -> Result<()> {
+        let conn = self.get_conn()?;
+        conn.execute(
+            "INSERT INTO operator_actions (id, inference_id, task_id, tool_name, args_json, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, 'PROPOSED') ON CONFLICT(id) DO NOTHING",
+            params![id, inference_id, task_id, tool_name, args_json],
+        )?;
+        Ok(())
+    }
+
+    #[allow(dead_code)]
+    pub fn decide_action(&self, id: &str, decision: &str, executed: bool) -> Result<()> {
+        let conn = self.get_conn()?;
+        // Guard the PROPOSED -> APPROVED|DENIED -> EXECUTED|FAILED state machine.
+        let status = if decision == "APPROVED" {
+            if executed {
+                "EXECUTED"
+            } else {
+                "APPROVED"
+            }
+        } else if decision == "DENIED" {
+            "DENIED"
+        } else {
+            decision
+        };
+        let changed = conn.execute(
+            "UPDATE operator_actions SET status = ?1,
+             executed_at = CASE WHEN ?1 IN ('EXECUTED','FAILED') THEN CURRENT_TIMESTAMP ELSE executed_at END
+             WHERE id = ?2 AND status = 'PROPOSED'",
+            params![status, id],
+        )?;
+        // Allow APPROVED -> EXECUTED/FAILED transition as a second step.
+        if changed == 0 && (status == "EXECUTED" || status == "FAILED") {
+            conn.execute(
+                "UPDATE operator_actions SET status = ?1, executed_at = CURRENT_TIMESTAMP
+                 WHERE id = ?2 AND status = 'APPROVED'",
+                params![status, id],
+            )?;
+        }
         Ok(())
     }
 }

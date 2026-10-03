@@ -4,8 +4,16 @@ import WebSocket from 'ws';
 let ws: WebSocket | null = null;
 let statusBarItem: vscode.StatusBarItem;
 let reconnectTimer: NodeJS.Timeout | null = null;
+let activeRunId: string | null = null;
 
 const WS_URL = 'ws://127.0.0.1:41789/ws';
+
+function getActiveRunId(): string {
+  if (!activeRunId) {
+    activeRunId = 'vscode-run-' + Date.now();
+  }
+  return activeRunId;
+}
 
 export function activate(context: vscode.ExtensionContext) {
   statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -34,6 +42,27 @@ export function activate(context: vscode.ExtensionContext) {
   });
   context.subscriptions.push(docChangeSub);
 
+  // Auto-report saved files as ai/files_changed so the widget's
+  // "N files changed" counter updates live without manual simulation.
+  const fileSaveSub = vscode.workspace.onDidSaveTextDocument((doc) => {
+    try {
+      const workspaceFolder = vscode.workspace.getWorkspaceFolder(doc.uri);
+      const relativePath = workspaceFolder
+        ? vscode.workspace.asRelativePath(doc.uri)
+        : doc.fileName;
+      sendPayload({
+        type: 'ai/files_changed',
+        payload: {
+          runId: getActiveRunId(),
+          filePaths: [relativePath],
+        },
+      });
+    } catch (err) {
+      console.error('WorkPulse file save telemetry error', err);
+    }
+  });
+  context.subscriptions.push(fileSaveSub);
+
   // Register Commands
   context.subscriptions.push(
     vscode.commands.registerCommand('workpulse.connect', () => {
@@ -41,10 +70,11 @@ export function activate(context: vscode.ExtensionContext) {
       connectToWorkpulse(context);
     }),
     vscode.commands.registerCommand('workpulse.simulateAiStart', () => {
+      activeRunId = 'vscode-run-' + Date.now();
       sendPayload({
         type: 'ai/run_started',
         payload: {
-          runId: 'vscode-run-' + Date.now(),
+          runId: activeRunId,
           agentName: 'Gemini 3.8 Flash',
           goal: 'Refactoring SQLite schema & query planner',
         },
@@ -55,7 +85,7 @@ export function activate(context: vscode.ExtensionContext) {
       sendPayload({
         type: 'ai/waiting_input',
         payload: {
-          runId: 'vscode-run-active',
+          runId: getActiveRunId(),
           prompt: 'Execute database migration script on production replica?',
           toolName: 'run_command',
         },
@@ -66,12 +96,41 @@ export function activate(context: vscode.ExtensionContext) {
       sendPayload({
         type: 'ai/run_finished',
         payload: {
-          runId: 'vscode-run-active',
+          runId: getActiveRunId(),
           status: 'COMPLETED',
           summary: 'All database queries optimized and verified',
         },
       });
       vscode.window.showInformationMessage('WorkPulse: Sent AI completed event');
+    }),
+    vscode.commands.registerCommand('workpulse.simulateFilesChanged', async () => {
+      const input = await vscode.window.showInputBox({
+        prompt: 'File paths changed (comma-separated)',
+        value: 'src/db/schema.sql',
+      });
+      if (!input) return;
+      const filePaths = input.split(',').map((s) => s.trim()).filter(Boolean);
+      if (filePaths.length === 0) return;
+      sendPayload({
+        type: 'ai/files_changed',
+        payload: { runId: getActiveRunId(), filePaths },
+      });
+      vscode.window.showInformationMessage(`WorkPulse: Sent ${filePaths.length} file(s) changed event`);
+    }),
+    vscode.commands.registerCommand('workpulse.simulateTestsResult', async () => {
+      const status = await vscode.window.showQuickPick(['RUNNING', 'PASSED', 'FAILED'], {
+        placeHolder: 'Select test result to send',
+      });
+      if (!status) return;
+      sendPayload({
+        type: 'ai/tests_result',
+        payload: {
+          runId: getActiveRunId(),
+          status: status as 'RUNNING' | 'PASSED' | 'FAILED',
+          summary: `Manual ${status.toLowerCase()} report from VS Code`,
+        },
+      });
+      vscode.window.showInformationMessage(`WorkPulse: Sent tests ${status.toLowerCase()} event`);
     })
   );
 }

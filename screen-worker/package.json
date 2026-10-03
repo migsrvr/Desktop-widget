@@ -1,0 +1,13 @@
+{
+  "name": "workpulse-screen-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WorkPulse screen vision relay: throttled capture -> cloud vision -> 127.0.0.1:41789",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test test/vision.test.js"
+  },
+  "dependencies": {},
+  "engines": { "node": ">=18" }
+}

@@ -3,7 +3,8 @@ use axum::{
         ws::{Message, WebSocket, WebSocketUpgrade},
         Query, State,
     },
-    response::{Html, IntoResponse, Json},
+    http::{header, StatusCode},
+    response::{Html, IntoResponse, Json, Response},
     routing::{get, post},
     Router,
 };
@@ -16,13 +17,22 @@ use tower_http::cors::{Any, CorsLayer};
 
 pub struct ServerState {
     pub tx: broadcast::Sender<String>,
+    pub screen: std::sync::Arc<crate::screen::ScreenManager>,
 }
 
 pub async fn start_server_with_channel(
     port: u16,
     tx: broadcast::Sender<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let state = Arc::new(ServerState { tx });
+    start_server_with_screen(port, tx, std::sync::Arc::new(crate::screen::ScreenManager::new())).await
+}
+
+pub async fn start_server_with_screen(
+    port: u16,
+    tx: broadcast::Sender<String>,
+    screen: std::sync::Arc<crate::screen::ScreenManager>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let state = Arc::new(ServerState { tx, screen });
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -35,6 +45,11 @@ pub async fn start_server_with_channel(
         .route("/api/ai/event", post(ai_event_handler))
         .route("/api/task", post(task_event_handler))
         .route("/api/spotify/callback", get(spotify_callback_handler))
+        .route("/api/screen/status", get(screen_status_handler))
+        .route("/api/screen/capture", post(screen_capture_handler))
+        .route("/api/screen/latest", get(screen_latest_handler))
+        .route("/api/operator/propose", post(operator_propose_handler))
+        .route("/api/operator/approve", post(operator_approve_handler))
         .layer(cors)
         .with_state(state);
 
@@ -82,6 +97,147 @@ async fn task_event_handler(
     let text = payload.to_string();
     let _ = state.tx.send(text);
     Json(json!({ "status": "ok", "delivered": true }))
+}
+
+// ---- Screen + operator bridge (no pixels persisted) ----
+
+async fn screen_status_handler(State(state): State<Arc<ServerState>>) -> impl IntoResponse {
+    Json(json!(state.screen.status()))
+}
+
+#[derive(serde::Deserialize, Default)]
+struct CaptureBody {
+    #[serde(default)]
+    window_title: Option<String>,
+    #[serde(default)]
+    app_name: Option<String>,
+}
+
+async fn screen_capture_handler(
+    State(state): State<Arc<ServerState>>,
+    axum::Json(body): axum::Json<CaptureBody>,
+) -> impl IntoResponse {
+    let (meta, _jpeg, deduplicated) = state
+        .screen
+        .capture_now(body.window_title.clone(), body.app_name.clone());
+
+    if !deduplicated {
+        if let Ok(db) = crate::db::Database::init() {
+            if let Some(sess) = state.screen.session_id() {
+                let _ = db.create_screen_session(&sess, "MONITOR");
+                let _ = db.insert_frame(
+                    &meta.frame_id,
+                    &sess,
+                    body.window_title.as_deref(),
+                    body.app_name.as_deref(),
+                    meta.width as i64,
+                    meta.height as i64,
+                    &meta.hash,
+                );
+            }
+        }
+        let event = json!({ "type": "screen/observed", "payload": {
+            "frameId": meta.frame_id, "sessionId": meta.session_id,
+            "windowTitle": body.window_title, "appName": body.app_name,
+            "width": meta.width, "height": meta.height,
+            "hash": meta.hash, "capturedAt": meta.captured_at,
+        }});
+        let _ = state.tx.send(event.to_string());
+    }
+
+    Json(json!({ "status": "ok", "deduplicated": deduplicated, "frame": meta }))
+}
+
+async fn screen_latest_handler(State(state): State<Arc<ServerState>>) -> Response {
+    match state.screen.last_jpeg() {
+        Some(bytes) => (
+            StatusCode::OK,
+            [(header::CONTENT_TYPE, "image/jpeg")],
+            bytes,
+        )
+            .into_response(),
+        None => (StatusCode::NOT_FOUND, Json(json!({ "error": "no frame yet" }))).into_response(),
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct ProposeBody {
+    #[serde(default)]
+    action_id: Option<String>,
+    #[serde(default)]
+    inference_id: Option<String>,
+    #[serde(default)]
+    task_id: Option<String>,
+    tool: String,
+    #[serde(default)]
+    args: serde_json::Value,
+    #[serde(default)]
+    prompt: Option<String>,
+}
+
+async fn operator_propose_handler(
+    State(state): State<Arc<ServerState>>,
+    axum::Json(body): axum::Json<ProposeBody>,
+) -> impl IntoResponse {
+    let args_json = body.args.to_string();
+    if let Err(e) = crate::operator::validate_tool(&body.tool, &args_json) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "status": "error", "error": e })),
+        )
+            .into_response();
+    }
+    let action_id = body.action_id.unwrap_or_else(|| format!("act-{}", chrono::Utc::now().timestamp_millis()));
+    if let Ok(db) = crate::db::Database::init() {
+        let _ = db.propose_action(
+            &action_id,
+            body.inference_id.as_deref(),
+            body.task_id.as_deref(),
+            &body.tool,
+            &args_json,
+        );
+    }
+    let event = json!({ "type": "agent/action_proposed", "payload": {
+        "actionId": action_id, "inferenceId": body.inference_id,
+        "taskId": body.task_id, "tool": body.tool, "args": body.args,
+        "prompt": body.prompt.unwrap_or_else(|| format!("Approve {}?", body.tool)),
+        "status": "PROPOSED",
+        "createdAt": chrono::Utc::now().to_rfc3339(),
+    }});
+    let _ = state.tx.send(event.to_string());
+    Json(json!({ "status": "ok", "actionId": action_id })).into_response()
+}
+
+#[derive(serde::Deserialize)]
+struct ApproveBody {
+    action_id: String,
+    decision: String, // APPROVED | DENIED
+}
+
+async fn operator_approve_handler(
+    State(state): State<Arc<ServerState>>,
+    axum::Json(body): axum::Json<ApproveBody>,
+) -> impl IntoResponse {
+    let decision = body.decision.to_uppercase();
+    if decision != "APPROVED" && decision != "DENIED" {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "status": "error", "error": "decision must be APPROVED or DENIED" })),
+        )
+            .into_response();
+    }
+    if let Ok(db) = crate::db::Database::init() {
+        // Record approval first (PROPOSED -> APPROVED/DENIED), execution flips to EXECUTED after.
+        let _ = db.decide_action(&body.action_id, &decision, false);
+    }
+    let event = json!({ "type": "agent/action_decided",
+        "payload": { "actionId": body.action_id, "decision": decision } });
+    let _ = state.tx.send(event.to_string());
+    // Also fan out as generic ai event so the widget timeline picks it up.
+    let audit = json!({ "type": decision == "APPROVED",
+        "payload": {} });
+    let _ = audit; // keep audit trail in operator_actions table (no extra broadcast needed)
+    Json(json!({ "status": "ok", "decision": decision })).into_response()
 }
 
 #[derive(serde::Deserialize)]

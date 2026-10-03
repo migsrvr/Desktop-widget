@@ -15,6 +15,12 @@ import {
   SpotifyAuthStatus,
   formatTrackDuration,
   validateSpotifyAction,
+  VisionInference,
+  OperatorActionProposal,
+  isVisionConfident,
+  validateOperatorAction,
+  canApproveAction,
+  mapVisionToAiStatus,
 } from './events';
 
 describe('Domain Models & Invariants', () => {
@@ -191,5 +197,79 @@ describe('Domain Models & Invariants', () => {
 
     expect(sampleTrack.name).toBe('Midnight City');
     expect(sampleTrack.isPlaying).toBe(true);
+  });
+
+  it('gates vision inference on confidence threshold', () => {
+    const base: VisionInference = {
+      inferenceId: 'inf-1',
+      frameId: 'frame-1',
+      provider: 'mock',
+      state: 'ERROR',
+      confidence: 0.9,
+      summary: 'Build error visible',
+      createdAt: new Date().toISOString(),
+    };
+    expect(isVisionConfident(base)).toBe(true);
+    expect(isVisionConfident({ ...base, confidence: 0.74 })).toBe(false);
+    expect(isVisionConfident({ ...base, confidence: 0.75 })).toBe(true);
+    expect(isVisionConfident({ ...base, confidence: NaN })).toBe(false);
+    expect(isVisionConfident({ ...base, state: 'BOGUS' as never })).toBe(false);
+  });
+
+  it('validates operator tools and args', () => {
+    expect(validateOperatorAction('click', { x: 100, y: 200 }).isValid).toBe(true);
+    expect(validateOperatorAction('mouse_move', { x: 10, y: 20 }).isValid).toBe(true);
+    expect(validateOperatorAction('click', { x: 'a', y: 1 }).isValid).toBe(false);
+    expect(validateOperatorAction('type', { text: 'hello' }).isValid).toBe(true);
+    expect(validateOperatorAction('type', { text: '' }).isValid).toBe(false);
+    expect(validateOperatorAction('hotkey', { keys: 'ctrl+s' }).isValid).toBe(true);
+    expect(validateOperatorAction('hotkey', {}).isValid).toBe(false);
+    expect(validateOperatorAction('rm_rf', {}).isValid).toBe(false);
+  });
+
+  it('guards operator approval state machine', () => {
+    expect(canApproveAction('PROPOSED')).toBe(true);
+    expect(canApproveAction('APPROVED')).toBe(false);
+    expect(canApproveAction('EXECUTED')).toBe(false);
+    expect(canApproveAction('DENIED')).toBe(false);
+    expect(canApproveAction('FAILED')).toBe(false);
+  });
+
+  it('maps vision states to honest AI statuses', () => {
+    expect(mapVisionToAiStatus('STUCK')).toBe('WAITING_INPUT');
+    expect(mapVisionToAiStatus('ERROR')).toBe('WAITING_INPUT');
+    expect(mapVisionToAiStatus('DONE')).toBe('WORKING');
+    expect(mapVisionToAiStatus('IDLE')).toBe('WORKING');
+    expect(mapVisionToAiStatus('PROGRESSING')).toBe('WORKING');
+  });
+
+  it('serializes screen operator WS messages', () => {
+    const vision: IdeToWidgetMessage = {
+      type: 'ai/vision_update',
+      payload: {
+        inferenceId: 'inf-9',
+        frameId: 'frame-9',
+        provider: 'gemini',
+        state: 'ERROR',
+        confidence: 0.91,
+        summary: 'TypeScript error overlay',
+        createdAt: new Date().toISOString(),
+      },
+    };
+    const parsed = JSON.parse(JSON.stringify(vision)) as IdeToWidgetMessage;
+    expect(parsed.type).toBe('ai/vision_update');
+
+    const proposal: IdeToWidgetMessage = {
+      type: 'agent/action_proposed',
+      payload: {
+        actionId: 'act-1',
+        tool: 'hotkey',
+        args: { keys: 'ctrl+s' },
+        prompt: 'Save open file?',
+        status: 'PROPOSED',
+        createdAt: new Date().toISOString(),
+      } as OperatorActionProposal,
+    };
+    expect(JSON.parse(JSON.stringify(proposal)).type).toBe('agent/action_proposed');
   });
 });

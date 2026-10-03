@@ -25,10 +25,16 @@ export const TaskList: React.FC<TaskListProps> = ({
   const [isDoneCollapsed, setIsDoneCollapsed] = useState(false);
   const [isPastCollapsed, setIsPastCollapsed] = useState(true);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && newTitle.trim()) {
+  const handleSubmit = () => {
+    if (newTitle.trim()) {
       onAddTask(newTitle.trim(), 'NEXT');
       setNewTitle('');
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSubmit();
     }
   };
 
@@ -154,12 +160,13 @@ export const TaskList: React.FC<TaskListProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* Clean Monotone Input (No ugly select dropdown) */}
+      {/* Task Input — the single add entry point (Enter or +) */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          padding: '6px 12px',
+          gap: 4,
+          padding: '4px 4px 4px 12px',
           borderRadius: 'var(--radius-pill)',
           backgroundColor: 'rgba(0, 0, 0, 0.25)',
           border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -170,9 +177,11 @@ export const TaskList: React.FC<TaskListProps> = ({
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Add task for today... (Press Enter)"
+          placeholder="Add task for today…"
+          aria-label="Add task for today"
           style={{
             flex: 1,
+            minWidth: 0,
             background: 'transparent',
             border: 'none',
             outline: 'none',
@@ -181,6 +190,20 @@ export const TaskList: React.FC<TaskListProps> = ({
             fontFamily: 'inherit',
           }}
         />
+        <button
+          onClick={handleSubmit}
+          disabled={!newTitle.trim()}
+          className="apple-btn-text"
+          style={{
+            fontSize: 13,
+            fontWeight: 700,
+            padding: '3px 10px',
+            opacity: newTitle.trim() ? 1 : 0.4,
+          }}
+          title="Add task"
+        >
+          +
+        </button>
       </div>
 
       {/* Task Buckets */}

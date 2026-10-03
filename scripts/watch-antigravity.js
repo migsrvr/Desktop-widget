@@ -58,6 +58,66 @@ function sendToWorkpulse(payload) {
 
 let lastStepIndex = -1;
 let lastAction = '';
+const seenFiles = new Set();
+let lastTestStatus = '';
+
+function looksLikeFilePath(s) {
+  if (typeof s !== 'string') return false;
+  const trimmed = s.trim().replace(/^["']|["']$/g, '');
+  if (trimmed.length < 3 || trimmed.length > 500) return false;
+  if (/\s{2,}/.test(trimmed)) return false;
+  // Must contain a path separator or a file extension to avoid matching prose.
+  if (!trimmed.includes('/') && !trimmed.includes('\\') && !/\.[a-zA-Z0-9]{1,5}$/.test(trimmed)) return false;
+  return /\.[a-zA-Z0-9]{1,5}$/.test(trimmed);
+}
+
+function extractFilePaths(step) {
+  const found = [];
+  try {
+    const toolCalls = step.tool_calls || [];
+    for (const tc of toolCalls) {
+      let args = tc.args;
+      if (typeof args === 'string') {
+        try { args = JSON.parse(args); } catch { /* keep raw string */ }
+      }
+      if (typeof args === 'string') {
+        if (looksLikeFilePath(args)) found.push(args.trim());
+        continue;
+      }
+      if (args && typeof args === 'object') {
+        const stack = [args];
+        while (stack.length > 0) {
+          const cur = stack.pop();
+          if (Array.isArray(cur)) {
+            for (const v of cur) {
+              if (typeof v === 'object' && v !== null) stack.push(v);
+              else if (looksLikeFilePath(v)) found.push(String(v).trim());
+            }
+          } else if (cur && typeof cur === 'object') {
+            for (const [k, v] of Object.entries(cur)) {
+              if (typeof v === 'object' && v !== null) {
+                stack.push(v);
+              } else if (typeof v === 'string') {
+                const keyHit = /file|path/i.test(k);
+                if (keyHit && looksLikeFilePath(v)) found.push(v.trim());
+                else if (!keyHit && looksLikeFilePath(v) && v.length < 200) found.push(v.trim());
+              }
+            }
+          }
+        }
+      }
+    }
+  } catch { /* ignore extraction errors */ }
+  return [...new Set(found)];
+}
+
+function detectTestStatus(description) {
+  const lower = (description || '').toLowerCase();
+  if (/tests?\s+(passed|passing)|all\s+tests?\s+green|0\s+failed/.test(lower)) return 'PASSED';
+  if (/tests?\s+(failed|failing)|test\s+failure|1\+\s*failed/.test(lower)) return 'FAILED';
+  if (/pytest|vitest|jest|npm\s+test|running\s+tests?|executing\s+unit\s+tests?/.test(lower)) return 'RUNNING';
+  return '';
+}
 
 function checkTranscript() {
   const file = getLatestTranscriptFile();
@@ -101,6 +161,29 @@ function checkTranscript() {
           description = 'Thinking and planning next steps...';
           status = 'PLANNING';
         }
+      }
+
+      // Always forward newly seen file paths + test signals, even when the
+      // description text itself hasn't changed (e.g. multi-file edits).
+      const filePaths = extractFilePaths(step);
+      const freshFiles = filePaths.filter((f) => !seenFiles.has(f));
+      for (const f of filePaths) seenFiles.add(f);
+      if (freshFiles.length > 0) {
+        console.log(`[WorkPulse Watcher] ${freshFiles.length} file(s) changed: ${freshFiles.slice(0, 3).join(', ')}`);
+        sendToWorkpulse({
+          type: 'ai/files_changed',
+          payload: { runId: 'live-antigravity', filePaths: freshFiles },
+        });
+      }
+
+      const testStatus = detectTestStatus(description);
+      if (testStatus && testStatus !== lastTestStatus) {
+        lastTestStatus = testStatus;
+        console.log(`[WorkPulse Watcher] Tests ${testStatus.toLowerCase()}: ${description}`);
+        sendToWorkpulse({
+          type: 'ai/tests_result',
+          payload: { runId: 'live-antigravity', status: testStatus, summary: description },
+        });
       }
 
       if (description !== lastAction) {

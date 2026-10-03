@@ -14,6 +14,7 @@ interface CollapsedPillProps {
   onDockTopRight?: () => void;
   spotifyTrack?: SpotifyTrack | null;
   onSpotifyControl?: (action: SpotifyPlaybackAction) => void;
+  operatorWatching?: boolean;
 }
 
 export const CollapsedPill: React.FC<CollapsedPillProps> = ({
@@ -29,6 +30,7 @@ export const CollapsedPill: React.FC<CollapsedPillProps> = ({
   onDockTopRight,
   spotifyTrack,
   onSpotifyControl,
+  operatorWatching,
 }) => {
   const formatTime = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60);
@@ -138,6 +140,24 @@ export const CollapsedPill: React.FC<CollapsedPillProps> = ({
       >
         {doneCount}/{tasksCount}
       </div>
+
+      {operatorWatching && (
+        <div
+          data-tauri-drag-region
+          style={{
+            fontSize: 9,
+            fontWeight: 700,
+            color: '#ffffff',
+            backgroundColor: 'rgba(255, 255, 255, 0.18)',
+            padding: '1px 6px',
+            borderRadius: 'var(--radius-pill)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+          }}
+          title="Screen operator is watching"
+        >
+          ◉ Watching
+        </div>
+      )}
 
       {/* Focus Timer Capsule */}
       <div
