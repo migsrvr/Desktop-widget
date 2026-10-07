@@ -145,7 +145,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
           <span
             className="session-mono"
             style={{
-              fontSize: 9,
+              fontSize: 11.5,
               fontWeight: 700,
               letterSpacing: '0.06em',
               color: 'var(--session-text-secondary)',
@@ -155,7 +155,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
           </span>
           <span
             style={{
-              fontSize: 11,
+              fontSize: 13.5,
               fontWeight: 600,
               color: 'var(--session-text-primary)',
               whiteSpace: 'nowrap',
@@ -170,8 +170,8 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
             {isAgentWorking && (
               <span
                 style={{
-                  width: 5,
-                  height: 5,
+                  width: 6,
+                  height: 6,
                   borderRadius: '50%',
                   backgroundColor: '#FFFFFF',
                   display: 'inline-block',
@@ -181,7 +181,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
             <span
               className="session-mono"
               style={{
-                fontSize: 10,
+                fontSize: 12,
                 color: isAgentWorking ? '#FFFFFF' : 'var(--session-text-secondary)',
               }}
             >
@@ -193,7 +193,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
           <div
             className="session-mono"
             style={{
-              fontSize: 9,
+              fontSize: 11,
               color: 'var(--session-text-secondary)',
               marginTop: 2,
               letterSpacing: '1px',
@@ -223,7 +223,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
           <span
             className="session-mono"
             style={{
-              fontSize: 9,
+              fontSize: 11.5,
               fontWeight: 700,
               letterSpacing: '0.06em',
               color: 'var(--session-text-secondary)',
@@ -233,7 +233,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
           </span>
           <span
             style={{
-              fontSize: 11,
+              fontSize: 13.5,
               fontWeight: 600,
               color: 'var(--session-text-primary)',
               whiteSpace: 'nowrap',
@@ -246,8 +246,8 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <span
               style={{
-                width: 5,
-                height: 5,
+                width: 6,
+                height: 6,
                 borderRadius: '50%',
                 backgroundColor: '#FFFFFF',
                 opacity: operatorWatching ? 1 : 0.35,
@@ -257,7 +257,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
             <span
               className="session-mono"
               style={{
-                fontSize: 10,
+                fontSize: 12,
                 color: operatorWatching ? '#FFFFFF' : 'var(--session-text-secondary)',
               }}
             >
@@ -267,7 +267,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
           <span
             className="session-mono"
             style={{
-              fontSize: 9,
+              fontSize: 11,
               color: 'var(--session-text-secondary)',
               marginTop: 2,
             }}
@@ -293,7 +293,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
           <span
             className="session-mono"
             style={{
-              fontSize: 9,
+              fontSize: 11.5,
               fontWeight: 700,
               letterSpacing: '0.06em',
               color: 'var(--session-text-secondary)',
@@ -303,7 +303,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
           </span>
           <span
             style={{
-              fontSize: 11,
+              fontSize: 13.5,
               fontWeight: 600,
               color: 'var(--session-text-primary)',
               whiteSpace: 'nowrap',
@@ -316,7 +316,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
           <span
             className="session-mono"
             style={{
-              fontSize: 10,
+              fontSize: 12,
               color: spotifyTrack ? '#FFFFFF' : 'var(--session-text-secondary)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
@@ -329,7 +329,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
           <span
             className="session-mono"
             style={{
-              fontSize: 9,
+              fontSize: 11,
               color: 'var(--session-text-secondary)',
               marginTop: 2,
               whiteSpace: 'nowrap',
@@ -360,7 +360,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span
               className="session-mono"
-              style={{ fontSize: 10, fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.05em' }}
+              style={{ fontSize: 11, fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.05em' }}
             >
               {activeChannelDetail === 'agent'
                 ? 'CHANNEL 01 / AGENT TELEMETRY'
@@ -371,7 +371,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
             <button
               onClick={() => setActiveChannelDetail(null)}
               className="session-btn"
-              style={{ padding: '1px 5px', fontSize: 9 }}
+              style={{ padding: '1px 5px', fontSize: 10 }}
               title="Close channel details"
             >
               ✕
@@ -381,21 +381,21 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
           {/* AGENT DETAIL DRAWER */}
           {activeChannelDetail === 'agent' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: 11, color: 'var(--session-text-primary)', lineHeight: 1.4 }}>
+              <div style={{ fontSize: 12, color: 'var(--session-text-primary)', lineHeight: 1.4 }}>
                 {aiRun?.currentStepDescription || 'Waiting for agent workflow…'}
               </div>
               {aiRun?.goal && (
-                <div style={{ fontSize: 10, color: 'var(--session-text-secondary)' }}>
+                <div style={{ fontSize: 11, color: 'var(--session-text-secondary)' }}>
                   Goal: {aiRun.goal}
                 </div>
               )}
               {aiRun?.testStatus && aiRun.testStatus !== 'NOT_RUN' && (
-                <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: '#FFFFFF' }}>
+                <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: '#FFFFFF' }}>
                   Tests: {aiRun.testStatus} {aiRun.testSummary ? `· ${aiRun.testSummary}` : ''}
                 </div>
               )}
               {aiRun?.modifiedFiles && aiRun.modifiedFiles.length > 0 && (
-                <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--session-text-secondary)' }}>
+                <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--session-text-secondary)' }}>
                   Changed: {aiRun.modifiedFiles.slice(0, 3).join(', ')}
                   {aiRun.modifiedFiles.length > 3 ? ` +${aiRun.modifiedFiles.length - 3} more` : ''}
                 </div>
@@ -411,7 +411,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
                   <button
                     onClick={onToggleOperatorWatching}
                     className="session-btn"
-                    style={{ fontSize: 10 }}
+                    style={{ fontSize: 11 }}
                   >
                     {operatorWatching ? 'Pause Watching' : 'Start Watching'}
                   </button>
@@ -420,7 +420,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
                   <button
                     onClick={onOperatorCapture}
                     className="session-btn"
-                    style={{ fontSize: 10 }}
+                    style={{ fontSize: 11 }}
                   >
                     Capture Now
                   </button>
@@ -436,8 +436,8 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
                     backgroundColor: 'rgba(255, 255, 255, 0.05)',
                   }}
                 >
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#FFFFFF' }}>Proposal Approval:</div>
-                  <div style={{ fontSize: 11, color: 'var(--session-text-primary)', marginTop: 2 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#FFFFFF' }}>Proposal Approval:</div>
+                  <div style={{ fontSize: 12, color: 'var(--session-text-primary)', marginTop: 2 }}>
                     {operatorProposal.prompt}
                   </div>
                   <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
@@ -445,7 +445,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
                       <button
                         onClick={onOperatorApprove}
                         className="session-btn-primary"
-                        style={{ fontSize: 10, padding: '2px 8px' }}
+                        style={{ fontSize: 11, padding: '2px 8px' }}
                       >
                         Approve
                       </button>
@@ -454,7 +454,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
                       <button
                         onClick={onOperatorDeny}
                         className="session-btn"
-                        style={{ fontSize: 10, padding: '2px 8px' }}
+                        style={{ fontSize: 11, padding: '2px 8px' }}
                       >
                         Deny
                       </button>
@@ -464,7 +464,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
               )}
 
               {operatorInference && (
-                <div style={{ fontSize: 10, color: 'var(--session-text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                <div style={{ fontSize: 11, color: 'var(--session-text-secondary)', fontFamily: 'var(--font-mono)' }}>
                   Vision Inference: {operatorInference.state} ({Math.round(operatorInference.confidence * 100)}%)
                 </div>
               )}
@@ -476,7 +476,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {isSpotifyConnected ? (
                 <>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#FFFFFF' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#FFFFFF' }}>
                     {spotifyTrack ? `${spotifyTrack.name} — ${spotifyTrack.artist}` : 'Connected (No active playback)'}
                   </div>
                   {onSpotifyControl && (
@@ -484,21 +484,21 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
                       <button
                         onClick={() => onSpotifyControl('PREVIOUS')}
                         className="session-btn"
-                        style={{ fontSize: 10 }}
+                        style={{ fontSize: 11 }}
                       >
                         ⏮ Prev
                       </button>
                       <button
                         onClick={() => onSpotifyControl(spotifyTrack?.isPlaying ? 'PAUSE' : 'PLAY')}
                         className="session-btn-primary"
-                        style={{ fontSize: 10 }}
+                        style={{ fontSize: 11 }}
                       >
                         {spotifyTrack?.isPlaying ? '⏸ Pause' : '▶ Play'}
                       </button>
                       <button
                         onClick={() => onSpotifyControl('NEXT')}
                         className="session-btn"
-                        style={{ fontSize: 10 }}
+                        style={{ fontSize: 11 }}
                       >
                         Next ⏭
                       </button>
@@ -507,17 +507,17 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
                 </>
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 10, color: 'var(--session-text-secondary)' }}>
+                  <span style={{ fontSize: 11, color: 'var(--session-text-secondary)' }}>
                     Spotify not connected
                   </span>
                   <div style={{ display: 'flex', gap: 6 }}>
                     {onDetectSpotifyLocal && (
-                      <button onClick={onDetectSpotifyLocal} className="session-btn" style={{ fontSize: 10 }}>
+                      <button onClick={onDetectSpotifyLocal} className="session-btn" style={{ fontSize: 11 }}>
                         Detect Windows
                       </button>
                     )}
                     {onOpenSpotifySetup && (
-                      <button onClick={onOpenSpotifySetup} className="session-btn-primary" style={{ fontSize: 10 }}>
+                      <button onClick={onOpenSpotifySetup} className="session-btn-primary" style={{ fontSize: 11 }}>
                         {isSpotifyConnecting ? 'Connecting…' : 'Setup'}
                       </button>
                     )}

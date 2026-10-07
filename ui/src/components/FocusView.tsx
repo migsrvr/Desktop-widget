@@ -59,28 +59,18 @@ export const FocusView: React.FC<FocusViewProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span
             className="session-display"
-            style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.06em' }}
+            style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.06em' }}
           >
             SESSION
           </span>
           <span
             className="session-mono"
-            style={{ fontSize: 10, color: 'var(--session-text-secondary)', letterSpacing: '0.05em' }}
+            style={{ fontSize: 11.5, color: 'var(--session-text-secondary)', letterSpacing: '0.05em' }}
           >
             / FOCUS MODE
           </span>
         </div>
 
-        <div className="non-drag" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <button
-            onClick={() => onSelectViewMode('BOARD')}
-            className="session-btn"
-            style={{ fontSize: 10, padding: '2px 7px' }}
-            title="Return to Board"
-          >
-            BOARD ↗
-          </button>
-        </div>
       </div>
 
       {/* Hero Task Title */}
@@ -88,7 +78,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
         <span
           className="session-mono"
           style={{
-            fontSize: 9,
+            fontSize: 10.5,
             fontWeight: 700,
             color: 'var(--session-text-secondary)',
             letterSpacing: '0.08em',
@@ -98,7 +88,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
         </span>
         <div
           style={{
-            fontSize: 14,
+            fontSize: 16,
             fontWeight: 700,
             color: 'var(--session-text-primary)',
             textTransform: 'uppercase',
@@ -128,7 +118,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
         <span
           className="session-display"
           style={{
-            fontSize: 42,
+            fontSize: 46,
             fontWeight: 700,
             letterSpacing: '0.08em',
             color: '#FFFFFF',

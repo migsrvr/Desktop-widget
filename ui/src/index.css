@@ -40,13 +40,13 @@
 }
 
 :root {
-  /* SESSION Strict Monochrome Palette */
+  /* SESSION Strict Monochrome Palette — High-contrast pure & bright silver-white */
   --session-bg: #121212;
-  --session-surface: #202020;
-  --session-surface-active: #2A2A2A;
-  --session-text-primary: #E7E7E7;
-  --session-text-secondary: #AAAAAA;
-  --session-border: #424242;
+  --session-surface: #1F1F1F;
+  --session-surface-active: #2C2C2C;
+  --session-text-primary: #FFFFFF;
+  --session-text-secondary: #E8E8E8;
+  --session-border: #4A4A4A;
   --session-accent-white: #FFFFFF;
 
   /* Typography Roles - Doto used across the entire application */
@@ -56,18 +56,18 @@
 
   /* Compatibility & Inset Aliases */
   --mono-bg-acrylic: #121212;
-  --mono-card: #202020;
-  --mono-card-hover: #2A2A2A;
+  --mono-card: #1F1F1F;
+  --mono-card-hover: #2C2C2C;
   --mono-subcard: #181818;
-  --mono-border: #424242;
-  --mono-border-subtle: #2D2D2D;
-  --mono-border-highlight: #666666;
-  --mono-border-card: #424242;
+  --mono-border: #4A4A4A;
+  --mono-border-subtle: #383838;
+  --mono-border-highlight: #888888;
+  --mono-border-card: #4A4A4A;
 
-  --text-primary: #E7E7E7;
-  --text-secondary: #AAAAAA;
-  --text-tertiary: #777777;
-  --text-disabled: #444444;
+  --text-primary: #FFFFFF;
+  --text-secondary: #E8E8E8;
+  --text-tertiary: #B8B8B8;
+  --text-disabled: #666666;
 
   --radius-xs: 2px;
   --radius-sm: 4px;
@@ -100,7 +100,7 @@ html, body, #root {
   box-sizing: border-box;
   background-color: transparent !important;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 14.5px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -210,7 +210,7 @@ input:focus-visible {
   border: 1px solid var(--session-border);
   color: var(--session-text-primary);
   font-family: var(--font-sans);
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 600;
   padding: 4px 10px;
   border-radius: var(--radius-sm);
@@ -224,7 +224,7 @@ input:focus-visible {
 
 .session-btn:hover {
   background: var(--session-surface-active);
-  border-color: #666666;
+  border-color: #888888;
   color: #FFFFFF;
 }
 
@@ -235,11 +235,11 @@ input:focus-visible {
 }
 
 .session-btn-primary {
-  background: #E7E7E7;
+  background: #FFFFFF;
   color: #121212;
   border: 1px solid #FFFFFF;
   font-family: var(--font-sans);
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
   padding: 5px 12px;
   border-radius: var(--radius-sm);

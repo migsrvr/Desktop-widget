@@ -70,7 +70,7 @@ export const CurrentSessionBanner: React.FC<CurrentSessionBannerProps> = ({
         <span
           className="session-mono"
           style={{
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 700,
             letterSpacing: '0.08em',
             color: 'var(--session-text-secondary)',
@@ -86,7 +86,7 @@ export const CurrentSessionBanner: React.FC<CurrentSessionBannerProps> = ({
             display: 'inline-flex',
             alignItems: 'center',
             gap: 6,
-            padding: '2px 8px',
+            padding: '3px 10px',
             borderRadius: 'var(--radius-sm)',
             backgroundColor:
               displayState === 'IN_FOCUS'
@@ -101,8 +101,8 @@ export const CurrentSessionBanner: React.FC<CurrentSessionBannerProps> = ({
         >
           <span
             style={{
-              width: 5,
-              height: 5,
+              width: 6,
+              height: 6,
               borderRadius: '50%',
               backgroundColor:
                 displayState === 'IN_FOCUS'
@@ -114,7 +114,7 @@ export const CurrentSessionBanner: React.FC<CurrentSessionBannerProps> = ({
           <span
             className="session-mono"
             style={{
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               letterSpacing: '0.06em',
               color:
@@ -141,7 +141,7 @@ export const CurrentSessionBanner: React.FC<CurrentSessionBannerProps> = ({
         <div style={{ flex: 1, minWidth: 0 }}>
           <h2
             style={{
-              fontSize: 15,
+              fontSize: 20,
               fontWeight: 700,
               lineHeight: 1.25,
               letterSpacing: '-0.01em',
@@ -172,7 +172,7 @@ export const CurrentSessionBanner: React.FC<CurrentSessionBannerProps> = ({
           <div
             className="session-display"
             style={{
-              fontSize: 26,
+              fontSize: 38,
               fontWeight: 700,
               lineHeight: 1,
               color: '#FFFFFF',
@@ -198,7 +198,7 @@ export const CurrentSessionBanner: React.FC<CurrentSessionBannerProps> = ({
         <div
           className="session-mono"
           style={{
-            fontSize: 10,
+            fontSize: 12,
             color: 'var(--session-text-secondary)',
             letterSpacing: '0.04em',
             userSelect: 'none',
@@ -223,7 +223,8 @@ export const CurrentSessionBanner: React.FC<CurrentSessionBannerProps> = ({
         <span
           className="session-mono"
           style={{
-            fontSize: 10,
+            fontSize: 12,
+            fontWeight: 600,
             color: 'var(--session-text-secondary)',
           }}
         >

@@ -23,7 +23,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ timeline }) => {
           padding: '16px 8px',
           textAlign: 'center',
           color: 'var(--session-text-secondary)',
-          fontSize: 11,
+          fontSize: 12,
         }}
       >
         No activity logged yet.
@@ -54,7 +54,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ timeline }) => {
             borderRadius: 'var(--radius-sm)',
             backgroundColor: 'rgba(255, 255, 255, 0.02)',
             border: '1px solid var(--session-border)',
-            fontSize: 11,
+            fontSize: 13.5,
             boxSizing: 'border-box',
           }}
         >
@@ -62,8 +62,8 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ timeline }) => {
             className="session-mono"
             style={{
               color: 'var(--session-text-secondary)',
-              fontSize: 10,
-              minWidth: 54,
+              fontSize: 12,
+              minWidth: 62,
               flexShrink: 0,
             }}
           >

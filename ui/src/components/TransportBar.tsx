@@ -50,8 +50,8 @@ export const TransportBar: React.FC<TransportBarProps> = ({
           className="session-btn-primary"
           style={{
             flex: 1,
-            padding: '7px 10px',
-            fontSize: 11,
+            padding: '7px 12px',
+            fontSize: 12,
             letterSpacing: '0.04em',
             textAlign: 'center',
           }}
@@ -79,7 +79,7 @@ export const TransportBar: React.FC<TransportBarProps> = ({
               background: 'transparent',
               border: 'none',
               color: 'var(--session-text-primary)',
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: 700,
               cursor: isTimerRunning || targetMinutes <= 5 ? 'default' : 'pointer',
               opacity: isTimerRunning || targetMinutes <= 5 ? 0.3 : 1,
@@ -93,10 +93,10 @@ export const TransportBar: React.FC<TransportBarProps> = ({
           <span
             className="session-mono"
             style={{
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 700,
               color: '#FFFFFF',
-              minWidth: 50,
+              minWidth: 52,
               textAlign: 'center',
               userSelect: 'none',
             }}
@@ -111,7 +111,7 @@ export const TransportBar: React.FC<TransportBarProps> = ({
               background: 'transparent',
               border: 'none',
               color: 'var(--session-text-primary)',
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: 700,
               cursor: isTimerRunning || targetMinutes >= 180 ? 'default' : 'pointer',
               opacity: isTimerRunning || targetMinutes >= 180 ? 0.3 : 1,
@@ -129,8 +129,8 @@ export const TransportBar: React.FC<TransportBarProps> = ({
           disabled={!hasActiveTask}
           className="session-btn"
           style={{
-            padding: '7px 12px',
-            fontSize: 11,
+            padding: '7px 14px',
+            fontSize: 12,
             letterSpacing: '0.04em',
             opacity: hasActiveTask ? 1 : 0.4,
             cursor: hasActiveTask ? 'pointer' : 'default',
@@ -157,31 +157,31 @@ export const TransportBar: React.FC<TransportBarProps> = ({
             onClick={() => onSelectViewMode('BOARD')}
             className={`session-btn ${viewMode === 'BOARD' ? 'active' : ''}`}
             style={{
-              fontSize: 10,
+              fontSize: 11.5,
               fontWeight: 700,
-              padding: '3px 10px',
+              padding: '4px 11px',
               letterSpacing: '0.05em',
               fontFamily: 'var(--font-mono)',
               borderColor: viewMode === 'BOARD' ? 'var(--session-accent-white)' : 'var(--session-border)',
             }}
             title="Center Board on screen"
           >
-            BOARD (CENTER)
+            BOARD
           </button>
           <button
             onClick={() => onSelectViewMode('DOCK')}
             className={`session-btn ${viewMode === 'DOCK' || viewMode === 'FOCUS' ? 'active' : ''}`}
             style={{
-              fontSize: 10,
+              fontSize: 11.5,
               fontWeight: 700,
-              padding: '3px 10px',
+              padding: '4px 11px',
               letterSpacing: '0.05em',
               fontFamily: 'var(--font-mono)',
               borderColor: viewMode === 'DOCK' || viewMode === 'FOCUS' ? 'var(--session-accent-white)' : 'var(--session-border)',
             }}
             title="Dock Focus Mode to top-right"
           >
-            DOCK (TOP-RIGHT)
+            DOCK
           </button>
         </div>
 
@@ -191,9 +191,9 @@ export const TransportBar: React.FC<TransportBarProps> = ({
             onClick={onOpenIde}
             className="session-btn"
             style={{
-              fontSize: 10,
+              fontSize: 11.5,
               fontWeight: 700,
-              padding: '3px 10px',
+              padding: '4px 11px',
               fontFamily: 'var(--font-mono)',
               letterSpacing: '0.04em',
               color: '#FFFFFF',

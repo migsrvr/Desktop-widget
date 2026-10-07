@@ -29,6 +29,7 @@ import {
   ViewMode,
 } from '@workpulse/shared';
 import { haptics } from '../audio/haptics';
+import { markProgrammaticWindowMove } from './useWindowMagnet';
 import { useSpotifyPlayer } from './useSpotifyPlayer';
 
 const STORAGE_KEY_TASKS = 'workpulse_tasks_v3';
@@ -346,7 +347,7 @@ export function useWorkpulseState() {
 
   // Dynamically set window dimensions according to viewMode:
   // - BOARD: ~1340x800, centered on the current monitor.
-  // - DOCK / FOCUS: 420x260 focus mode, docked to top-right of the current monitor.
+  // - DOCK / FOCUS: 420x280 focus mode, docked to top-right of the current monitor.
   useEffect(() => {
     if (!isTauri()) return;
 
@@ -362,8 +363,9 @@ export function useWorkpulseState() {
         }
 
         if (viewMode === 'DOCK' || viewMode === 'FOCUS') {
-          // Focus mode docks to the top-right corner of the monitor
+          // Dock goes to the top-right corner of the monitor
           const target = getFocusDockedGeometry(monBounds, FOCUS_WIDTH, FOCUS_HEIGHT, 16);
+          markProgrammaticWindowMove();
           await win.setSize(new LogicalSize(target.width, target.height));
           await win.setPosition(new LogicalPosition(target.x, target.y));
           return;
@@ -377,6 +379,7 @@ export function useWorkpulseState() {
         } catch {}
 
         const target = getBoardCenteredGeometry(monBounds, savedGeom);
+        markProgrammaticWindowMove();
         await win.setSize(new LogicalSize(target.width, target.height));
         await win.setPosition(new LogicalPosition(target.x, target.y));
       } catch {

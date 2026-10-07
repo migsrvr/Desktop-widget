@@ -120,8 +120,8 @@ export const TaskList: React.FC<TaskListProps> = ({
         <span
           className="session-mono"
           style={{
-            width: 24,
-            fontSize: 11,
+            width: 28,
+            fontSize: 13,
             color: isNow ? '#FFFFFF' : 'var(--session-text-secondary)',
             fontWeight: isNow ? 700 : 500,
             flexShrink: 0,
@@ -137,8 +137,8 @@ export const TaskList: React.FC<TaskListProps> = ({
             onUpdateStatus(task.id, isDone ? 'NEXT' : 'DONE');
           }}
           style={{
-            width: 14,
-            height: 14,
+            width: 15,
+            height: 15,
             borderRadius: '2px',
             border: `1px solid ${isDone ? 'var(--session-accent-white)' : 'var(--session-border)'}`,
             backgroundColor: isDone ? '#FFFFFF' : 'transparent',
@@ -151,7 +151,7 @@ export const TaskList: React.FC<TaskListProps> = ({
           }}
           title={isDone ? 'Mark incomplete' : 'Mark complete'}
         >
-          {isDone && <span style={{ fontSize: 9, color: '#000000', fontWeight: 900 }}>✓</span>}
+          {isDone && <span style={{ fontSize: 10, color: '#000000', fontWeight: 900 }}>✓</span>}
         </button>
 
         {/* Column: TASK Title (Wraps naturally if long) */}
@@ -159,7 +159,7 @@ export const TaskList: React.FC<TaskListProps> = ({
           style={{
             flex: 1,
             minWidth: 0,
-            fontSize: 12,
+            fontSize: 14,
             fontFamily: 'var(--font-mono)',
             fontWeight: isNow ? 600 : 400,
             color: isDone
@@ -181,9 +181,9 @@ export const TaskList: React.FC<TaskListProps> = ({
         <span
           className="session-mono"
           style={{
-            width: 36,
+            width: 44,
             textAlign: 'right',
-            fontSize: 11,
+            fontSize: 12.5,
             color: isNow ? '#FFFFFF' : 'var(--session-text-secondary)',
             flexShrink: 0,
           }}
@@ -195,9 +195,9 @@ export const TaskList: React.FC<TaskListProps> = ({
         <span
           className="session-mono"
           style={{
-            width: 68,
+            width: 80,
             textAlign: 'right',
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 700,
             letterSpacing: '0.04em',
             color: isNow
@@ -221,7 +221,7 @@ export const TaskList: React.FC<TaskListProps> = ({
               }}
               style={{
                 color: 'var(--session-text-secondary)',
-                fontSize: 11,
+                fontSize: 12,
                 lineHeight: 1,
                 padding: '1px 3px',
                 cursor: 'pointer',
@@ -263,8 +263,8 @@ export const TaskList: React.FC<TaskListProps> = ({
         <span
           className="session-mono"
           style={{
-            width: 24,
-            fontSize: 10,
+            width: 28,
+            fontSize: 12,
             fontWeight: 700,
             color: 'var(--session-text-secondary)',
             flexShrink: 0,
@@ -272,13 +272,13 @@ export const TaskList: React.FC<TaskListProps> = ({
         >
           NO.
         </span>
-        <span style={{ width: 14, flexShrink: 0 }} />
+        <span style={{ width: 15, flexShrink: 0 }} />
         <span
           className="session-mono"
           style={{
             flex: 1,
             minWidth: 0,
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 700,
             color: 'var(--session-text-secondary)',
           }}
@@ -288,9 +288,9 @@ export const TaskList: React.FC<TaskListProps> = ({
         <span
           className="session-mono"
           style={{
-            width: 36,
+            width: 44,
             textAlign: 'right',
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 700,
             color: 'var(--session-text-secondary)',
             flexShrink: 0,
@@ -301,9 +301,9 @@ export const TaskList: React.FC<TaskListProps> = ({
         <span
           className="session-mono"
           style={{
-            width: 68,
+            width: 80,
             textAlign: 'right',
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 700,
             color: 'var(--session-text-secondary)',
             flexShrink: 0,
@@ -333,7 +333,7 @@ export const TaskList: React.FC<TaskListProps> = ({
               padding: '16px 8px',
               textAlign: 'center',
               color: 'var(--session-text-secondary)',
-              fontSize: 11,
+              fontSize: 12,
             }}
           >
             No active tasks queued. Click + Add task below.
@@ -357,7 +357,7 @@ export const TaskList: React.FC<TaskListProps> = ({
             marginTop: 4,
           }}
         >
-          <span className="session-mono" style={{ fontSize: 11, color: 'var(--session-text-secondary)' }}>
+          <span className="session-mono" style={{ fontSize: 12, color: 'var(--session-text-secondary)' }}>
             +
           </span>
           <input
@@ -374,7 +374,7 @@ export const TaskList: React.FC<TaskListProps> = ({
               border: 'none',
               outline: 'none',
               color: '#FFFFFF',
-              fontSize: 11,
+              fontSize: 12,
               fontFamily: 'var(--font-mono)',
             }}
           />
@@ -382,14 +382,14 @@ export const TaskList: React.FC<TaskListProps> = ({
             onClick={handleSubmit}
             disabled={!newTitle.trim()}
             className="session-btn"
-            style={{ padding: '2px 8px', fontSize: 10 }}
+            style={{ padding: '2px 8px', fontSize: 11 }}
           >
             Add
           </button>
           <button
             onClick={() => setIsAdding(false)}
             className="session-btn"
-            style={{ padding: '2px 6px', fontSize: 10, color: 'var(--session-text-secondary)' }}
+            style={{ padding: '2px 6px', fontSize: 11, color: 'var(--session-text-secondary)' }}
           >
             Cancel
           </button>
@@ -403,7 +403,7 @@ export const TaskList: React.FC<TaskListProps> = ({
             border: 'none',
             color: 'var(--session-text-secondary)',
             fontFamily: 'var(--font-mono)',
-            fontSize: 11,
+            fontSize: 13,
             fontWeight: 600,
             padding: '6px 8px',
             cursor: 'pointer',
@@ -431,7 +431,7 @@ export const TaskList: React.FC<TaskListProps> = ({
               padding: '4px 8px',
               cursor: 'pointer',
               color: 'var(--session-text-secondary)',
-              fontSize: 10,
+              fontSize: 11.5,
               fontFamily: 'var(--font-mono)',
               userSelect: 'none',
             }}
@@ -467,7 +467,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                 gap: 6,
                 cursor: 'pointer',
                 color: 'var(--text-tertiary)',
-                fontSize: 10,
+                fontSize: 11,
                 fontFamily: 'var(--font-mono)',
                 userSelect: 'none',
               }}
@@ -480,7 +480,7 @@ export const TaskList: React.FC<TaskListProps> = ({
               <button
                 onClick={onClearPastTasks}
                 className="session-btn"
-                style={{ fontSize: 9, padding: '1px 6px' }}
+                style={{ fontSize: 10, padding: '1px 6px' }}
                 title="Clear past days' completed tasks"
               >
                 Clear

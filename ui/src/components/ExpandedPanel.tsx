@@ -247,7 +247,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
               data-tauri-drag-region
               className="session-display"
               style={{
-                fontSize: 16,
+                fontSize: 18,
                 fontWeight: 700,
                 letterSpacing: '0.06em',
                 color: '#FFFFFF',
@@ -260,7 +260,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
               data-tauri-drag-region
               className="session-mono"
               style={{
-                fontSize: 10,
+                fontSize: 11.5,
                 color: 'var(--session-text-secondary)',
                 letterSpacing: '0.05em',
                 marginTop: 2,
@@ -283,7 +283,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
             <span
               className="session-mono"
               style={{
-                fontSize: 12,
+                fontSize: 13.5,
                 fontWeight: 600,
                 color: 'var(--session-text-secondary)',
                 letterSpacing: '0.05em',
@@ -292,12 +292,12 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
               {timeStr}
             </span>
 
-            {/* Hardware-Style Window Buttons: PIN, SND, −, □, × */}
+            {/* Hardware-Style Window Buttons: PIN, SND, − */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <button
                 onClick={onToggleAlwaysOnTop}
                 className={`session-btn ${isAlwaysOnTop ? 'active' : ''}`}
-                style={{ padding: '2px 7px', fontSize: 10 }}
+                style={{ padding: '2px 8px', fontSize: 11 }}
                 title={isAlwaysOnTop ? 'Pinned always on top' : 'Pin always on top'}
               >
                 PIN
@@ -306,7 +306,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
               <button
                 onClick={onToggleMute}
                 className={`session-btn ${isMuted ? 'active' : ''}`}
-                style={{ padding: '2px 6px', fontSize: 10 }}
+                style={{ padding: '2px 7px', fontSize: 11 }}
                 title={isMuted ? 'Sound muted' : 'Sound active'}
               >
                 {isMuted ? 'MUTED' : 'SND'}
@@ -316,21 +316,12 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
                 <button
                   onClick={onMinimizeToTaskbar}
                   className="session-btn"
-                  style={{ padding: '2px 6px', fontSize: 10 }}
+                  style={{ padding: '2px 7px', fontSize: 11 }}
                   title="Minimize window"
                 >
                   −
                 </button>
               )}
-
-              <button
-                onClick={onCollapse}
-                className="session-btn"
-                style={{ padding: '2px 8px', fontSize: 10, fontWeight: 700 }}
-                title="Dock Focus mode to top-right"
-              >
-                DOCK ↗
-              </button>
             </div>
           </div>
         </div>
@@ -419,7 +410,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
               <span
                 className="session-mono"
                 style={{
-                  fontSize: 10,
+                  fontSize: 11.5,
                   fontWeight: 700,
                   color: 'var(--session-text-secondary)',
                   letterSpacing: '0.06em',
@@ -430,14 +421,14 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
               <button
                 onClick={() => onToggleSidePanel?.('activity')}
                 className="session-btn"
-                style={{ fontSize: 10, padding: '2px 8px' }}
+                style={{ fontSize: 11, padding: '2px 8px' }}
                 title="Open activity log flyout"
               >
                 {timeline.length} LOG ›
               </button>
             </div>
 
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <SpotifyPlayerCard
                 track={spotifyTrack ?? null}
                 isConnected={!!isSpotifyConnected}

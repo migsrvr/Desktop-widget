@@ -19,6 +19,18 @@ const LIVE_SNAP_MAX_SPEED = 700; // logical px/s — skip gentle magnet mid-flin
 const DROP_QUIET_MS = 180; // ms of no movement before a drag counts as dropped
 const OWN_MOVE_GRACE_MS = 400; // ignore move events caused by our own setPosition
 
+/**
+ * Shared guard so programmatic window moves (view-mode switches, dock
+ * buttons) are never mistaken for user drags by the magnet listener.
+ * Any code that calls win.setPosition() for non-drag reasons must call
+ * markProgrammaticWindowMove() first.
+ */
+let lastProgrammaticMoveAt = 0;
+
+export function markProgrammaticWindowMove() {
+  lastProgrammaticMoveAt = Date.now();
+}
+
 export type SnapKind = 'top-right' | 'right' | 'left' | 'top' | null;
 
 export interface SnapGeometry {
@@ -117,6 +129,7 @@ export function useWindowMagnet(layoutKey: string, enabled: boolean = true) {
       const win = getCurrentWindow();
       const scale = monRef.current?.scale ?? (await win.scaleFactor().catch(() => 1));
       progRef.current = Date.now();
+      markProgrammaticWindowMove();
       trailRef.current = [];
       await win.setPosition(new PhysicalPosition(Math.round(x * scale), Math.round(y * scale)));
       if (!silent) haptics.snapClick();
@@ -192,7 +205,11 @@ export function useWindowMagnet(layoutKey: string, enabled: boolean = true) {
         unlisten = await win.onMoved(({ payload }) => {
           void (async () => {
             if (cancelled) return;
-            if (Date.now() - progRef.current < OWN_MOVE_GRACE_MS) return; // our own snap
+            // Ignore moves caused by our own snaps AND by view-mode
+            // switches (BOARD center / DOCK top-right) so the magnet
+            // never fights a button-driven reposition.
+            if (Date.now() - progRef.current < OWN_MOVE_GRACE_MS) return;
+            if (Date.now() - lastProgrammaticMoveAt < OWN_MOVE_GRACE_MS + 200) return;
             const mon = monRef.current;
             const size = sizeRef.current;
             if (!mon || !size) {

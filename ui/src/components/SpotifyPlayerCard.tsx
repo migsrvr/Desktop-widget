@@ -66,10 +66,10 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
             ♫
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#ffffff' }}>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#ffffff' }}>
               Spotify Audio
             </span>
-            <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
+            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
               Free Desktop & Web API
             </span>
           </div>
@@ -81,7 +81,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
               onClick={onDetectLocal}
               className="apple-btn-text"
               style={{
-                fontSize: 10,
+                fontSize: 11,
                 padding: '4px 10px',
                 backgroundColor: 'rgba(255, 255, 255, 0.08)',
                 borderColor: 'rgba(255, 255, 255, 0.16)',
@@ -95,7 +95,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
             onClick={onOpenSetup}
             className="apple-btn-primary"
             style={{
-              fontSize: 10,
+              fontSize: 11,
               padding: '4px 10px',
             }}
             title="Open Spotify Settings"
@@ -137,10 +137,10 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
             ♫
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: '#ffffff' }}>
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: '#ffffff' }}>
               Spotify Connected
             </span>
-            <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
+            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
               Play any track on Spotify to display artwork
             </span>
           </div>
@@ -149,7 +149,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
         <button
           onClick={onOpenSetup}
           className="apple-btn-text"
-          style={{ padding: '3px 7px', fontSize: 10 }}
+          style={{ padding: '3px 7px', fontSize: 11 }}
           title="Spotify Settings"
         >
           ⚙
@@ -169,10 +169,10 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
       <div
         className="w11-card"
         style={{
-          padding: '14px',
+          padding: '10px 12px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 12,
+          gap: 8,
           position: 'relative',
           overflow: 'hidden',
           backgroundColor: 'rgba(255, 255, 255, 0.03)',
@@ -183,10 +183,10 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
         {/* Top Header Row with Mini Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 13, color: '#ffffff' }}>♫</span>
+            <span style={{ fontSize: 14, color: '#ffffff' }}>♫</span>
             <span
               style={{
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: 700,
                 color: 'var(--text-secondary)',
                 textTransform: 'uppercase',
@@ -202,8 +202,8 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
               onClick={toggleArtworkExpanded}
               className="apple-btn-text"
               style={{
-                fontSize: 10,
-                padding: '2px 7px',
+                fontSize: 11,
+                padding: '2px 8px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 4,
@@ -216,7 +216,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
             <button
               onClick={onOpenSetup}
               className="apple-btn-text"
-              style={{ padding: '2px 6px', fontSize: 10 }}
+              style={{ padding: '2px 7px', fontSize: 11 }}
               title="Spotify Settings"
             >
               ⚙
@@ -224,11 +224,12 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
           </div>
         </div>
 
-        {/* Large Album Artwork Box */}
+        {/* Album Artwork Box — capped so the column never scrolls */}
         <div
           style={{
-            width: '100%',
+            width: 'min(100%, 170px)',
             aspectRatio: '1 / 1',
+            margin: '0 auto',
             borderRadius: '12px',
             overflow: 'hidden',
             backgroundColor: 'rgba(0, 0, 0, 0.4)',
@@ -237,6 +238,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             position: 'relative',
+            flexShrink: 0,
           }}
         >
           {track.albumArtUrl ? (
@@ -279,7 +281,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
         >
           <span
             style={{
-              fontSize: 13,
+              fontSize: 15,
               fontWeight: 700,
               color: '#ffffff',
               letterSpacing: '-0.2px',
@@ -294,7 +296,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
           </span>
           <span
             style={{
-              fontSize: 11,
+              fontSize: 12.5,
               color: 'var(--text-secondary)',
               maxWidth: '100%',
               overflow: 'hidden',
@@ -308,7 +310,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
           {track.album && track.album !== 'Spotify Free (Desktop)' && (
             <span
               style={{
-                fontSize: 10,
+                fontSize: 11,
                 color: 'var(--text-tertiary)',
                 maxWidth: '100%',
                 overflow: 'hidden',
@@ -347,7 +349,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                fontSize: 10,
+                fontSize: 11,
                 color: 'var(--text-tertiary)',
                 fontFamily: 'JetBrains Mono, SF Mono, monospace',
                 fontVariantNumeric: 'tabular-nums',
@@ -360,13 +362,13 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
         )}
 
         {/* Large Tactile Transport Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginTop: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 0 }}>
           <button
             onClick={() => onControl('PREVIOUS')}
             className="apple-btn-text"
             style={{
-              width: 36,
-              height: 36,
+              width: 30,
+              height: 30,
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
@@ -383,13 +385,13 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
             onClick={() => onControl(track.isPlaying ? 'PAUSE' : 'PLAY')}
             className="apple-btn-text"
             style={{
-              width: 44,
-              height: 44,
+              width: 38,
+              height: 38,
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 18,
+              fontSize: 15,
               padding: 0,
               color: '#ffffff',
               backgroundColor: 'rgba(255, 255, 255, 0.18)',
@@ -404,13 +406,13 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
             onClick={() => onControl('NEXT')}
             className="apple-btn-text"
             style={{
-              width: 36,
-              height: 36,
+              width: 30,
+              height: 30,
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 14,
+              fontSize: 12,
               padding: 0,
               backgroundColor: 'rgba(255, 255, 255, 0.06)',
             }}
@@ -481,7 +483,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
         >
           <span
             style={{
-              fontSize: 12,
+              fontSize: 13.5,
               fontWeight: 700,
               color: '#ffffff',
               whiteSpace: 'nowrap',
@@ -493,7 +495,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
           </span>
           <span
             style={{
-              fontSize: 10,
+              fontSize: 11.5,
               color: 'var(--text-secondary)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
@@ -513,7 +515,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
           <button
             onClick={() => onControl('PREVIOUS')}
             className="apple-btn-text"
-            style={{ padding: '3px 7px', fontSize: 11 }}
+            style={{ padding: '3px 7px', fontSize: 12 }}
             title="Previous Track"
           >
             ⏮
@@ -523,7 +525,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
             className="apple-btn-text"
             style={{
               padding: '3px 9px',
-              fontSize: 11,
+              fontSize: 12,
               color: '#ffffff',
               backgroundColor: 'rgba(255, 255, 255, 0.14)',
               borderColor: 'rgba(255, 255, 255, 0.2)',
@@ -535,7 +537,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
           <button
             onClick={() => onControl('NEXT')}
             className="apple-btn-text"
-            style={{ padding: '3px 7px', fontSize: 11 }}
+            style={{ padding: '3px 7px', fontSize: 12 }}
             title="Next Track"
           >
             ⏭
@@ -543,7 +545,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
           <button
             onClick={toggleArtworkExpanded}
             className="apple-btn-text"
-            style={{ padding: '3px 6px', fontSize: 10 }}
+            style={{ padding: '3px 6px', fontSize: 11 }}
             title="Expand song cover"
           >
             ▴
@@ -551,7 +553,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
           <button
             onClick={onOpenSetup}
             className="apple-btn-text"
-            style={{ padding: '3px 6px', fontSize: 10 }}
+            style={{ padding: '3px 6px', fontSize: 11 }}
             title="Spotify Settings"
           >
             ⚙

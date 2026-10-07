@@ -15,9 +15,9 @@ export interface MonitorBounds {
 export const DEFAULT_BOARD_WIDTH = 1340;
 export const DEFAULT_BOARD_HEIGHT = 800;
 export const FOCUS_WIDTH = 420;
-export const FOCUS_HEIGHT = 260;
+export const FOCUS_HEIGHT = 280;
 export const DOCK_WIDTH = 420;
-export const DOCK_HEIGHT = 260;
+export const DOCK_HEIGHT = 280;
 export const DOCK_MARGIN = 16;
 
 export const STORAGE_KEY_BOARD_GEOMETRY = 'session_board_geometry_v1';

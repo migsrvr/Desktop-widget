@@ -66,10 +66,10 @@ describe('windowGeometry', () => {
     expect(result.y).toBe(32);
   });
 
-  it('maintains distinct compact dimensions for Focus / Dock modes (420x260)', () => {
+  it('maintains distinct compact dimensions for Focus / Dock modes (420x280)', () => {
     expect(DOCK_WIDTH).toBe(420);
-    expect(DOCK_HEIGHT).toBe(260);
+    expect(DOCK_HEIGHT).toBe(280);
     expect(FOCUS_WIDTH).toBe(420);
-    expect(FOCUS_HEIGHT).toBe(260);
+    expect(FOCUS_HEIGHT).toBe(280);
   });
 });
