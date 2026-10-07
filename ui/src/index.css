@@ -91,15 +91,24 @@
   user-select: none;
 }
 
-html, body {
+html, body, #root {
   width: 100%;
   height: 100%;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
+  box-sizing: border-box;
   background-color: transparent !important;
   color: var(--text-primary);
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 /* Selection, caret, and focus carry the same monochrome world */

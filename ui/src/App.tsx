@@ -62,9 +62,10 @@ export const App: React.FC = () => {
     onMessage: handleBridgeMessage,
   });
 
-  // Sticky-note behavior: edge magnet + fling-to-dock top-right.
+  // Sticky-note behavior: edge magnet + fling-to-dock in DOCK mode.
   const { dockTopRight, isDocked } = useWindowMagnet(
-    `${viewMode}:${sidePanel ?? 'none'}`
+    `${viewMode}:${sidePanel ?? 'none'}`,
+    viewMode === 'DOCK'
   );
 
   const [showSimMenu, setShowSimMenu] = useState(false);
@@ -143,12 +144,15 @@ export const App: React.FC = () => {
       style={{
         width: '100%',
         height: '100%',
+        flex: 1,
+        minHeight: 0,
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'flex-start',
-        padding: viewMode === 'BOARD' ? 6 : 2,
+        alignItems: viewMode === 'BOARD' ? 'stretch' : 'flex-start',
+        padding: 0,
         boxSizing: 'border-box',
         overflow: 'hidden',
+        position: 'relative',
       }}
     >
       {/* View Mode Router: BOARD vs FOCUS vs DOCK */}
@@ -209,17 +213,24 @@ export const App: React.FC = () => {
             onOperatorDeny={operator.deny}
           />
 
-          {/* Dev-only telemetry simulator */}
+          {/* Dev-only telemetry simulator (floats non-intrusively in bottom-right) */}
           {import.meta.env.DEV && (
             <div
               style={{
-                marginTop: 6,
+                position: 'absolute',
+                bottom: 8,
+                right: 18,
+                zIndex: 100,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
                 fontSize: 10,
                 color: 'var(--session-text-secondary)',
-                paddingLeft: 4,
+                backgroundColor: 'rgba(18, 18, 18, 0.9)',
+                backdropFilter: 'blur(12px)',
+                padding: '3px 8px',
+                borderRadius: 'var(--radius-pill)',
+                border: '1px solid var(--session-border)',
               }}
             >
               <div
@@ -227,10 +238,6 @@ export const App: React.FC = () => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 5,
-                  padding: '2px 8px',
-                  borderRadius: 'var(--radius-pill)',
-                  backgroundColor: 'var(--session-surface)',
-                  border: '1px solid var(--session-border)',
                 }}
               >
                 <span
@@ -241,7 +248,7 @@ export const App: React.FC = () => {
                     backgroundColor: isConnected ? '#FFFFFF' : 'rgba(255, 255, 255, 0.3)',
                   }}
                 />
-                <span className="session-mono" style={{ color: 'var(--session-text-secondary)' }}>
+                <span className="session-mono" style={{ color: 'var(--session-text-secondary)', fontSize: 9 }}>
                   {isConnected ? 'Bridge Online' : 'Bridge Offline'}
                 </span>
               </div>
@@ -249,7 +256,7 @@ export const App: React.FC = () => {
               <button
                 onClick={() => setShowSimMenu(!showSimMenu)}
                 className="session-btn"
-                style={{ fontSize: 9, padding: '2px 6px' }}
+                style={{ fontSize: 9, padding: '1px 5px' }}
               >
                 {showSimMenu ? 'Hide' : 'Test AI'}
               </button>
@@ -258,38 +265,34 @@ export const App: React.FC = () => {
                 <div
                   style={{
                     display: 'inline-flex',
-                    gap: 4,
-                    backgroundColor: 'var(--session-surface)',
-                    padding: '2px 6px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--session-border)',
+                    gap: 3,
                   }}
                 >
                   <button
                     onClick={handleSimulateAiStart}
                     className="session-btn"
-                    style={{ fontSize: 9, padding: '2px 6px' }}
+                    style={{ fontSize: 9, padding: '1px 5px' }}
                   >
                     Start
                   </button>
                   <button
                     onClick={handleSimulateAiWaiting}
                     className="session-btn"
-                    style={{ fontSize: 9, padding: '2px 6px' }}
+                    style={{ fontSize: 9, padding: '1px 5px' }}
                   >
                     Approval
                   </button>
                   <button
                     onClick={handleSimulateAiDone}
                     className="session-btn"
-                    style={{ fontSize: 9, padding: '2px 6px' }}
+                    style={{ fontSize: 9, padding: '1px 5px' }}
                   >
                     Done
                   </button>
                   <button
                     onClick={handleSimulateVision}
                     className="session-btn"
-                    style={{ fontSize: 9, padding: '2px 6px' }}
+                    style={{ fontSize: 9, padding: '1px 5px' }}
                   >
                     Vision
                   </button>
@@ -300,7 +303,7 @@ export const App: React.FC = () => {
         </>
       )}
 
-      {viewMode === 'FOCUS' && (
+      {(viewMode === 'DOCK' || viewMode === 'FOCUS') && (
         <FocusView
           activeTask={activeTask}
           focusSeconds={focusSeconds}
@@ -312,27 +315,6 @@ export const App: React.FC = () => {
           onCompleteActiveTask={completeActiveTask}
           onSelectViewMode={setViewMode}
           onOpenIde={handleOpenIde}
-        />
-      )}
-
-      {viewMode === 'DOCK' && (
-        <CollapsedPill
-          activeTask={activeTask}
-          aiRun={aiRun}
-          tasksCount={todaysTasks.length}
-          doneCount={todaysDoneCount}
-          focusSeconds={focusSeconds}
-          isTimerRunning={isTimerRunning}
-          onExpand={toggleExpanded}
-          onMinimizeToTaskbar={minimizeToTaskbar}
-          onDockTopRight={dockTopRight}
-          onToggleTimer={(e) => {
-            e.stopPropagation();
-            toggleTimer();
-          }}
-          spotifyTrack={spotify.track}
-          onSpotifyControl={spotify.controlPlayback}
-          operatorWatching={operator.watching}
         />
       )}
 

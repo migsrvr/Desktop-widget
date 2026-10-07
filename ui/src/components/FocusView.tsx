@@ -35,7 +35,8 @@ export const FocusView: React.FC<FocusViewProps> = ({
     <div
       className="session-window-frame"
       style={{
-        width: 420,
+        width: '100%',
+        height: '100%',
         padding: '12px 14px',
         display: 'flex',
         flexDirection: 'column',

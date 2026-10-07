@@ -1,7 +1,21 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { invoke, isTauri } from '@tauri-apps/api/core';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { getCurrentWindow, currentMonitor } from '@tauri-apps/api/window';
 import { LogicalPosition, LogicalSize } from '@tauri-apps/api/dpi';
+import {
+  clampAndPositionBoard,
+  getBoardCenteredGeometry,
+  getFocusDockedGeometry,
+  DEFAULT_BOARD_WIDTH,
+  DEFAULT_BOARD_HEIGHT,
+  DOCK_WIDTH,
+  DOCK_HEIGHT,
+  FOCUS_WIDTH,
+  FOCUS_HEIGHT,
+  STORAGE_KEY_BOARD_GEOMETRY,
+  WindowGeometry,
+  MonitorBounds,
+} from '../utils/windowGeometry';
 import {
   Task,
   TaskStatus,
@@ -290,11 +304,12 @@ export function useWorkpulseState() {
     haptics.hapticPop(200);
   }, []);
 
-  // Side flyout panel: Spotify / Screen Operator extend to the LEFT
+  // Side flyout panel: Activity Log / Screen Operator extend to the LEFT
   // of the main column instead of stacking into one long widget.
-  const [sidePanel, setSidePanel] = useState<'spotify' | 'operator' | null>(null);
+  // (Spotify lives in the main column's right slot with its album art.)
+  const [sidePanel, setSidePanel] = useState<'activity' | 'operator' | null>(null);
 
-  const toggleSidePanel = useCallback((panel: 'spotify' | 'operator') => {
+  const toggleSidePanel = useCallback((panel: 'activity' | 'operator') => {
     haptics.snapClick();
     setSidePanel((prev) => (prev === panel ? null : panel));
   }, []);
@@ -303,71 +318,154 @@ export function useWorkpulseState() {
     setSidePanel(null);
   }, []);
 
-  // Dynamically resize Tauri native window to match pill vs flyout.
-  // When a side panel opens, the window grows leftward so the main
-  // column stays visually anchored where the user left it.
-  const MAIN_W = 420;
-  const SIDE_W = 300;
-  const SIDE_GAP = 8;
-  const prevSideRef = useRef<'spotify' | 'operator' | null>(null);
+  const viewModeRef = useRef<ViewMode>(viewMode);
+  viewModeRef.current = viewMode;
+
+  const saveBoardGeometry = useCallback(async () => {
+    if (!isTauri()) return;
+    try {
+      const win = getCurrentWindow();
+      const [size, pos, scale] = await Promise.all([
+        win.outerSize(),
+        win.outerPosition(),
+        win.scaleFactor(),
+      ]);
+      const ls = size.toLogical(scale);
+      const lp = pos.toLogical(scale);
+      if (ls.width >= 500 && ls.height >= 400) {
+        const geom: WindowGeometry = {
+          width: Math.round(ls.width),
+          height: Math.round(ls.height),
+          x: Math.round(lp.x),
+          y: Math.round(lp.y),
+        };
+        localStorage.setItem(STORAGE_KEY_BOARD_GEOMETRY, JSON.stringify(geom));
+      }
+    } catch {}
+  }, []);
+
+  // Dynamically set window dimensions according to viewMode:
+  // - BOARD: ~1340x800, centered on the current monitor.
+  // - DOCK / FOCUS: 420x260 focus mode, docked to top-right of the current monitor.
   useEffect(() => {
     if (!isTauri()) return;
-    const wasOpen = prevSideRef.current !== null;
-    const isOpen = sidePanel !== null && isExpanded;
-    prevSideRef.current = sidePanel;
 
     (async () => {
       try {
         const win = getCurrentWindow();
-        if (viewMode === 'DOCK') {
-          await win.setSize(new LogicalSize(345, 48));
+        const [scale, mon] = await Promise.all([win.scaleFactor(), currentMonitor()]);
+        let monBounds: MonitorBounds | null = null;
+        if (mon) {
+          const mp = mon.position.toLogical(scale);
+          const ms = mon.size.toLogical(scale);
+          monBounds = { x: mp.x, y: mp.y, width: ms.width, height: ms.height };
+        }
+
+        if (viewMode === 'DOCK' || viewMode === 'FOCUS') {
+          // Focus mode docks to the top-right corner of the monitor
+          const target = getFocusDockedGeometry(monBounds, FOCUS_WIDTH, FOCUS_HEIGHT, 16);
+          await win.setSize(new LogicalSize(target.width, target.height));
+          await win.setPosition(new LogicalPosition(target.x, target.y));
           return;
         }
-        if (viewMode === 'FOCUS') {
-          await win.setSize(new LogicalSize(420, 260));
-          return;
-        }
-        // BOARD mode:
-        // Shift horizontally only on open/close transitions so the
-        // main column doesn't jump when switching between flyouts.
-        if (isOpen && !wasOpen) {
-          const [pos, scale] = await Promise.all([win.outerPosition(), win.scaleFactor()]);
-          const logical = pos.toLogical(scale);
-          await win.setPosition(new LogicalPosition(logical.x - (SIDE_W + SIDE_GAP), logical.y));
-        } else if (!isOpen && wasOpen) {
-          const [pos, scale] = await Promise.all([win.outerPosition(), win.scaleFactor()]);
-          const logical = pos.toLogical(scale);
-          await win.setPosition(new LogicalPosition(logical.x + (SIDE_W + SIDE_GAP), logical.y));
-        }
-        await win.setSize(new LogicalSize(isOpen ? MAIN_W + SIDE_GAP + SIDE_W : MAIN_W, 640));
+
+        // BOARD mode: Centers back on the current monitor
+        let savedGeom: WindowGeometry | null = null;
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY_BOARD_GEOMETRY);
+          if (raw) savedGeom = JSON.parse(raw);
+        } catch {}
+
+        const target = getBoardCenteredGeometry(monBounds, savedGeom);
+        await win.setSize(new LogicalSize(target.width, target.height));
+        await win.setPosition(new LogicalPosition(target.x, target.y));
       } catch {
-        const targetH = viewMode === 'DOCK' ? 48 : viewMode === 'FOCUS' ? 260 : 640;
-        const targetW = viewMode === 'DOCK' ? 345 : 420;
+        const isDock = viewMode === 'DOCK' || viewMode === 'FOCUS';
+        const targetH = isDock ? FOCUS_HEIGHT : DEFAULT_BOARD_HEIGHT;
+        const targetW = isDock ? FOCUS_WIDTH : DEFAULT_BOARD_WIDTH;
         invoke('set_widget_size', { width: targetW, height: targetH }).catch(() => {});
       }
     })();
-  }, [viewMode, isExpanded, sidePanel]);
+  }, [viewMode]);
 
-  const setViewMode = useCallback((mode: ViewMode) => {
-    haptics.snapClick();
-    if (mode === 'DOCK' || mode === 'FOCUS') setSidePanel(null);
-    setViewModeState(mode);
-    try {
-      localStorage.setItem('session_view_mode_v1', mode);
-    } catch {}
+  // Persist user-adjusted Board window dimensions and position when resized or dragged
+  useEffect(() => {
+    if (!isTauri()) return;
+    let unlistenResized: (() => void) | undefined;
+    let unlistenMoved: (() => void) | undefined;
+    let debounceTimer: number | null = null;
+
+    const handleGeometryChange = () => {
+      if (viewModeRef.current !== 'BOARD') return;
+      if (debounceTimer) window.clearTimeout(debounceTimer);
+      debounceTimer = window.setTimeout(async () => {
+        if (viewModeRef.current !== 'BOARD') return;
+        try {
+          const win = getCurrentWindow();
+          const [size, pos, scale] = await Promise.all([
+            win.outerSize(),
+            win.outerPosition(),
+            win.scaleFactor(),
+          ]);
+          const ls = size.toLogical(scale);
+          const lp = pos.toLogical(scale);
+          if (ls.width >= 500 && ls.height >= 400) {
+            const geom: WindowGeometry = {
+              width: Math.round(ls.width),
+              height: Math.round(ls.height),
+              x: Math.round(lp.x),
+              y: Math.round(lp.y),
+            };
+            localStorage.setItem(STORAGE_KEY_BOARD_GEOMETRY, JSON.stringify(geom));
+          }
+        } catch {}
+      }, 250);
+    };
+
+    (async () => {
+      try {
+        const win = getCurrentWindow();
+        unlistenResized = await win.onResized(handleGeometryChange);
+        unlistenMoved = await win.onMoved(handleGeometryChange);
+      } catch {}
+    })();
+
+    return () => {
+      if (debounceTimer) window.clearTimeout(debounceTimer);
+      if (unlistenResized) unlistenResized();
+      if (unlistenMoved) unlistenMoved();
+    };
   }, []);
+
+  const setViewMode = useCallback(
+    (mode: ViewMode) => {
+      haptics.snapClick();
+      if (mode === 'DOCK' || mode === 'FOCUS') setSidePanel(null);
+      if (viewModeRef.current === 'BOARD') {
+        saveBoardGeometry();
+      }
+      viewModeRef.current = mode;
+      setViewModeState(mode);
+      try {
+        localStorage.setItem('session_view_mode_v1', mode);
+      } catch {}
+    },
+    [saveBoardGeometry]
+  );
 
   const toggleExpanded = useCallback(() => {
     haptics.snapClick();
-    setViewModeState((prev) => {
-      const next = prev === 'DOCK' ? 'BOARD' : 'DOCK';
-      if (next === 'DOCK') setSidePanel(null);
-      try {
-        localStorage.setItem('session_view_mode_v1', next);
-      } catch {}
-      return next;
-    });
-  }, []);
+    const next: ViewMode = viewModeRef.current === 'DOCK' ? 'BOARD' : 'DOCK';
+    if (next === 'DOCK') setSidePanel(null);
+    if (viewModeRef.current === 'BOARD') {
+      saveBoardGeometry();
+    }
+    viewModeRef.current = next;
+    setViewModeState(next);
+    try {
+      localStorage.setItem('session_view_mode_v1', next);
+    } catch {}
+  }, [saveBoardGeometry]);
 
   const completeActiveTask = useCallback(() => {
     if (activeTask) {

@@ -81,7 +81,7 @@ interface TrailPoint {
   t: number;
 }
 
-export function useWindowMagnet(layoutKey: string) {
+export function useWindowMagnet(layoutKey: string, enabled: boolean = true) {
   const [isDocked, setIsDocked] = useState(false);
 
   const sizeRef = useRef<{ w: number; h: number } | null>(null);
@@ -145,11 +145,12 @@ export function useWindowMagnet(layoutKey: string) {
 
   // Re-measure after expand/collapse or flyout changes resize the window.
   useEffect(() => {
+    if (!enabled) return;
     refreshMetrics();
     if (!isTauri()) return;
     const t = window.setTimeout(refreshMetrics, 350);
     return () => window.clearTimeout(t);
-  }, [layoutKey, refreshMetrics]);
+  }, [layoutKey, enabled, refreshMetrics]);
 
   const evaluateDrop = useCallback(
     async (dropX: number, dropY: number) => {
@@ -180,7 +181,7 @@ export function useWindowMagnet(layoutKey: string) {
   );
 
   useEffect(() => {
-    if (!isTauri()) return;
+    if (!isTauri() || !enabled) return;
     let unlisten: (() => void) | undefined;
     let cancelled = false;
 

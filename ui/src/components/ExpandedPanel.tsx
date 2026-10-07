@@ -16,6 +16,7 @@ import { TaskList } from './TaskList';
 import { CurrentSessionBanner } from './CurrentSessionBanner';
 import { StudioConsole } from './StudioConsole';
 import { TransportBar } from './TransportBar';
+import { TimelineView } from './TimelineView';
 import { SpotifyPlayerCard } from './SpotifyPlayerCard';
 import { OperatorCard } from './OperatorCard';
 
@@ -52,8 +53,8 @@ interface ExpandedPanelProps {
   onSelectViewMode?: (mode: ViewMode) => void;
   onOpenIde?: () => void;
   isBridgeConnected?: boolean;
-  sidePanel?: 'spotify' | 'operator' | null;
-  onToggleSidePanel?: (panel: 'spotify' | 'operator') => void;
+  sidePanel?: 'activity' | 'operator' | null;
+  onToggleSidePanel?: (panel: 'activity' | 'operator') => void;
   onCloseSidePanel?: () => void;
   spotifyTrack?: SpotifyTrack | null;
   isSpotifyConnected?: boolean;
@@ -103,6 +104,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   onSelectViewMode = () => {},
   onOpenIde,
   sidePanel = null,
+  onToggleSidePanel,
   onCloseSidePanel,
   spotifyTrack,
   isSpotifyConnected,
@@ -143,33 +145,37 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
         display: 'flex',
         flexDirection: 'row',
         gap: 8,
-        alignItems: 'flex-start',
+        alignItems: 'stretch',
         width: '100%',
+        height: '100%',
+        flex: 1,
+        minHeight: 0,
         boxSizing: 'border-box',
+        overflow: 'hidden',
       }}
     >
-      {/* Optional Left Flyout for detailed Spotify setup or Screen Operator camera feed */}
+      {/* Optional Flyout for detailed Spotify setup or Screen Operator camera feed */}
       {sidePanel && (
         <div
           className="session-panel-card"
           style={{
-            width: 300,
+            width: 320,
             flexShrink: 0,
             padding: '12px',
             display: 'flex',
             flexDirection: 'column',
             gap: 10,
             boxSizing: 'border-box',
-            maxHeight: 620,
+            height: '100%',
             overflowY: 'auto',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
             <span
               className="session-mono"
               style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: '#FFFFFF' }}
             >
-              {sidePanel === 'spotify' ? 'SPOTIFY SETUP' : 'SCREEN OPERATOR INSPECTION'}
+              {sidePanel === 'activity' ? 'ACTIVITY LOG' : 'SCREEN OPERATOR INSPECTION'}
             </span>
             <button
               onClick={onCloseSidePanel}
@@ -181,15 +187,10 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
             </button>
           </div>
 
-          {sidePanel === 'spotify' && onOpenSpotifySetup && onSpotifyControl && (
-            <SpotifyPlayerCard
-              track={spotifyTrack ?? null}
-              isConnected={!!isSpotifyConnected}
-              isConnecting={!!isSpotifyConnecting}
-              onOpenSetup={onOpenSpotifySetup}
-              onControl={onSpotifyControl}
-              onDetectLocal={onDetectSpotifyLocal}
-            />
+          {sidePanel === 'activity' && (
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+              <TimelineView timeline={timeline} />
+            </div>
           )}
 
           {sidePanel === 'operator' && (
@@ -210,17 +211,19 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
         </div>
       )}
 
-      {/* Main Board Console */}
+      {/* Main Board Console — Fills full window */}
       <div
         className="session-window-frame"
         style={{
           width: '100%',
-          maxWidth: 420,
-          padding: '14px',
+          height: '100%',
+          padding: '14px 18px',
           display: 'flex',
           flexDirection: 'column',
           gap: 10,
           boxSizing: 'border-box',
+          overflow: 'hidden',
+          flex: 1,
         }}
       >
         {/* Title Bar with Drag Region */}
@@ -235,6 +238,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
             justifyContent: 'space-between',
             cursor: 'grab',
             userSelect: 'none',
+            flexShrink: 0,
           }}
         >
           {/* SESSION / CONTROL BOARD Branding */}
@@ -243,7 +247,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
               data-tauri-drag-region
               className="session-display"
               style={{
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: 700,
                 letterSpacing: '0.06em',
                 color: '#FFFFFF',
@@ -272,14 +276,14 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
+              gap: 10,
             }}
           >
             {/* Real-Time Clock: 17:35:19 */}
             <span
               className="session-mono"
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
                 color: 'var(--session-text-secondary)',
                 letterSpacing: '0.05em',
@@ -288,12 +292,12 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
               {timeStr}
             </span>
 
-            {/* Hardware-Style Window Buttons: PIN, −, □, × */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            {/* Hardware-Style Window Buttons: PIN, SND, −, □, × */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <button
                 onClick={onToggleAlwaysOnTop}
                 className={`session-btn ${isAlwaysOnTop ? 'active' : ''}`}
-                style={{ padding: '2px 6px', fontSize: 9 }}
+                style={{ padding: '2px 7px', fontSize: 10 }}
                 title={isAlwaysOnTop ? 'Pinned always on top' : 'Pin always on top'}
               >
                 PIN
@@ -302,7 +306,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
               <button
                 onClick={onToggleMute}
                 className={`session-btn ${isMuted ? 'active' : ''}`}
-                style={{ padding: '2px 5px', fontSize: 9 }}
+                style={{ padding: '2px 6px', fontSize: 10 }}
                 title={isMuted ? 'Sound muted' : 'Sound active'}
               >
                 {isMuted ? 'MUTED' : 'SND'}
@@ -312,7 +316,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
                 <button
                   onClick={onMinimizeToTaskbar}
                   className="session-btn"
-                  style={{ padding: '2px 5px', fontSize: 9 }}
+                  style={{ padding: '2px 6px', fontSize: 10 }}
                   title="Minimize window"
                 >
                   −
@@ -320,92 +324,176 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
               )}
 
               <button
-                onClick={() => onSelectViewMode('FOCUS')}
-                className="session-btn"
-                style={{ padding: '2px 5px', fontSize: 9 }}
-                title="Switch to Focus mode"
-              >
-                □
-              </button>
-
-              <button
                 onClick={onCollapse}
                 className="session-btn"
-                style={{ padding: '2px 5px', fontSize: 9 }}
-                title="Collapse to Dock mode"
+                style={{ padding: '2px 8px', fontSize: 10, fontWeight: 700 }}
+                title="Dock Focus mode to top-right"
               >
-                ×
+                DOCK ↗
               </button>
             </div>
           </div>
         </div>
 
         {/* Hairline Divider */}
-        <div className="session-divider" />
+        <div className="session-divider" style={{ flexShrink: 0 }} />
 
         {/* Current Session Banner */}
-        <CurrentSessionBanner
-          activeTask={activeTask}
-          focusSeconds={focusSeconds}
-          targetMinutes={targetMinutes}
-          isTimerRunning={isTimerRunning}
-          completionPercentage={completionPercentage}
-        />
+        <div style={{ flexShrink: 0 }}>
+          <CurrentSessionBanner
+            activeTask={activeTask}
+            focusSeconds={focusSeconds}
+            targetMinutes={targetMinutes}
+            isTimerRunning={isTimerRunning}
+            completionPercentage={completionPercentage}
+          />
+        </div>
 
         {/* Hairline Divider */}
-        <div className="session-divider" />
+        <div className="session-divider" style={{ flexShrink: 0 }} />
 
-        {/* Airport Task Departure Board */}
-        <TaskList
-          tasks={tasks}
-          pastCompletedTasks={pastCompletedTasks}
-          onSelectActive={onSelectActiveTask}
-          onUpdateStatus={onUpdateTaskStatus}
-          onDeleteTask={onDeleteTask}
-          onAddTask={onAddTask}
-          onClearPastTasks={onClearPastTasks}
-        />
+        {/* Middle Region: Task Departure Board (Left) + Activity Log / Timeline (Right) */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            gap: 14,
+            flex: 1,
+            minHeight: 0,
+            overflow: 'hidden',
+            width: '100%',
+          }}
+        >
+          {/* Left: Airport Task Departure Board */}
+          <div
+            style={{
+              flex: 1.4,
+              minWidth: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              backgroundColor: 'var(--session-surface)',
+              border: '1px solid var(--session-border)',
+              borderRadius: 'var(--radius-md)',
+              padding: '10px 12px',
+              boxSizing: 'border-box',
+            }}
+          >
+            <TaskList
+              tasks={tasks}
+              pastCompletedTasks={pastCompletedTasks}
+              onSelectActive={onSelectActiveTask}
+              onUpdateStatus={onUpdateTaskStatus}
+              onDeleteTask={onDeleteTask}
+              onAddTask={onAddTask}
+              onClearPastTasks={onClearPastTasks}
+            />
+          </div>
+
+          {/* Right: Spotify Showcase with album art */}
+          <div
+            style={{
+              flex: 1,
+              minWidth: 320,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              backgroundColor: 'var(--session-surface)',
+              border: '1px solid var(--session-border)',
+              borderRadius: 'var(--radius-md)',
+              padding: '10px 12px',
+              boxSizing: 'border-box',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingBottom: 6,
+                borderBottom: '1px solid var(--session-border)',
+                marginBottom: 6,
+                flexShrink: 0,
+              }}
+            >
+              <span
+                className="session-mono"
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: 'var(--session-text-secondary)',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                02 / NOW PLAYING
+              </span>
+              <button
+                onClick={() => onToggleSidePanel?.('activity')}
+                className="session-btn"
+                style={{ fontSize: 10, padding: '2px 8px' }}
+                title="Open activity log flyout"
+              >
+                {timeline.length} LOG ›
+              </button>
+            </div>
+
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+              <SpotifyPlayerCard
+                track={spotifyTrack ?? null}
+                isConnected={!!isSpotifyConnected}
+                isConnecting={!!isSpotifyConnecting}
+                onOpenSetup={onOpenSpotifySetup ?? (() => {})}
+                onControl={onSpotifyControl ?? (() => {})}
+                onDetectLocal={onDetectSpotifyLocal}
+              />
+            </div>
+          </div>
+        </div>
 
         {/* Hairline Divider */}
-        <div className="session-divider" />
+        <div className="session-divider" style={{ flexShrink: 0 }} />
 
         {/* Studio Console (3-Channel Rack) */}
-        <StudioConsole
-          aiRun={aiRun}
-          timeline={timeline}
-          operatorWatching={operatorWatching}
-          operatorMode={operatorMode}
-          operatorFrame={operatorFrame}
-          operatorInference={operatorInference}
-          operatorProposal={operatorProposal}
-          operatorThumbUrl={operatorThumbUrl}
-          onToggleOperatorWatching={onToggleOperatorWatching}
-          onOperatorCapture={onOperatorCapture}
-          onOperatorApprove={onOperatorApprove}
-          onOperatorDeny={onOperatorDeny}
-          spotifyTrack={spotifyTrack}
-          isSpotifyConnected={isSpotifyConnected}
-          isSpotifyConnecting={isSpotifyConnecting}
-          onOpenSpotifySetup={onOpenSpotifySetup}
-          onSpotifyControl={onSpotifyControl}
-          onDetectSpotifyLocal={onDetectSpotifyLocal}
-        />
+        <div style={{ flexShrink: 0 }}>
+          <StudioConsole
+            aiRun={aiRun}
+            timeline={timeline}
+            operatorWatching={operatorWatching}
+            operatorMode={operatorMode}
+            operatorFrame={operatorFrame}
+            operatorInference={operatorInference}
+            operatorProposal={operatorProposal}
+            operatorThumbUrl={operatorThumbUrl}
+            onToggleOperatorWatching={onToggleOperatorWatching}
+            onOperatorCapture={onOperatorCapture}
+            onOperatorApprove={onOperatorApprove}
+            onOperatorDeny={onOperatorDeny}
+            spotifyTrack={spotifyTrack}
+            isSpotifyConnected={isSpotifyConnected}
+            isSpotifyConnecting={isSpotifyConnecting}
+            onOpenSpotifySetup={onOpenSpotifySetup}
+            onSpotifyControl={onSpotifyControl}
+            onDetectSpotifyLocal={onDetectSpotifyLocal}
+          />
+        </div>
 
         {/* Hairline Divider */}
-        <div className="session-divider" />
+        <div className="session-divider" style={{ flexShrink: 0 }} />
 
         {/* Transport Controls Bar */}
-        <TransportBar
-          isTimerRunning={isTimerRunning}
-          targetMinutes={targetMinutes}
-          viewMode={viewMode}
-          onToggleTimer={onToggleTimer}
-          onAdjustMinutes={onAdjustMinutes}
-          onCompleteActiveTask={onCompleteActiveTask}
-          onSelectViewMode={onSelectViewMode}
-          onOpenIde={onOpenIde}
-          hasActiveTask={!!activeTask}
-        />
+        <div style={{ flexShrink: 0 }}>
+          <TransportBar
+            isTimerRunning={isTimerRunning}
+            targetMinutes={targetMinutes}
+            viewMode={viewMode}
+            onToggleTimer={onToggleTimer}
+            onAdjustMinutes={onAdjustMinutes}
+            onCompleteActiveTask={onCompleteActiveTask}
+            onSelectViewMode={onSelectViewMode}
+            onOpenIde={onOpenIde}
+            hasActiveTask={!!activeTask}
+          />
+        </div>
       </div>
     </div>
   );

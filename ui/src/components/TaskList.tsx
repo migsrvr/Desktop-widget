@@ -241,9 +241,11 @@ export const TaskList: React.FC<TaskListProps> = ({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 4,
+        gap: 6,
         width: '100%',
+        height: '100%',
         boxSizing: 'border-box',
+        overflow: 'hidden',
       }}
     >
       {/* Airport Departure Board Table Header */}
@@ -255,6 +257,7 @@ export const TaskList: React.FC<TaskListProps> = ({
           borderBottom: '1px solid var(--session-border)',
           gap: 8,
           boxSizing: 'border-box',
+          flexShrink: 0,
         }}
       >
         <span
@@ -311,13 +314,14 @@ export const TaskList: React.FC<TaskListProps> = ({
         <span style={{ width: 14, flexShrink: 0 }} />
       </div>
 
-      {/* Task Rows Queue */}
+      {/* Task Rows Queue (Scrolls Internally) */}
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           gap: 2,
-          maxHeight: 180,
+          flex: 1,
+          minHeight: 0,
           overflowY: 'auto',
           paddingTop: 2,
         }}

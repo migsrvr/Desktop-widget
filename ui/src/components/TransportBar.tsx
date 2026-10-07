@@ -151,28 +151,38 @@ export const TransportBar: React.FC<TransportBarProps> = ({
           paddingTop: 8,
         }}
       >
-        {/* Mode Switcher */}
+        {/* Mode Switcher: BOARD vs DOCK */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          {(['BOARD', 'FOCUS', 'DOCK'] as ViewMode[]).map((mode) => {
-            const isActive = viewMode === mode;
-            return (
-              <button
-                key={mode}
-                onClick={() => onSelectViewMode(mode)}
-                className={`session-btn ${isActive ? 'active' : ''}`}
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  padding: '3px 8px',
-                  letterSpacing: '0.05em',
-                  fontFamily: 'var(--font-mono)',
-                  borderColor: isActive ? 'var(--session-accent-white)' : 'var(--session-border)',
-                }}
-              >
-                {mode}
-              </button>
-            );
-          })}
+          <button
+            onClick={() => onSelectViewMode('BOARD')}
+            className={`session-btn ${viewMode === 'BOARD' ? 'active' : ''}`}
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              padding: '3px 10px',
+              letterSpacing: '0.05em',
+              fontFamily: 'var(--font-mono)',
+              borderColor: viewMode === 'BOARD' ? 'var(--session-accent-white)' : 'var(--session-border)',
+            }}
+            title="Center Board on screen"
+          >
+            BOARD (CENTER)
+          </button>
+          <button
+            onClick={() => onSelectViewMode('DOCK')}
+            className={`session-btn ${viewMode === 'DOCK' || viewMode === 'FOCUS' ? 'active' : ''}`}
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              padding: '3px 10px',
+              letterSpacing: '0.05em',
+              fontFamily: 'var(--font-mono)',
+              borderColor: viewMode === 'DOCK' || viewMode === 'FOCUS' ? 'var(--session-accent-white)' : 'var(--session-border)',
+            }}
+            title="Dock Focus Mode to top-right"
+          >
+            DOCK (TOP-RIGHT)
+          </button>
         </div>
 
         {/* OPEN IDE Action */}
