@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct TaskRecord {
     pub id: String,
     pub day_plan_date: String,
@@ -18,6 +19,7 @@ pub struct TaskRecord {
 
 #[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct AiRunRecord {
     pub id: String,
     pub task_id: Option<String>,
@@ -34,6 +36,7 @@ pub struct AiRunRecord {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct TimelineEventRecord {
     pub id: String,
     pub day_plan_date: String,
@@ -214,6 +217,34 @@ impl Database {
         )?;
 
         let rows = stmt.query_map(params![date], |row| {
+            Ok(TaskRecord {
+                id: row.get(0)?,
+                day_plan_date: row.get(1)?,
+                title: row.get(2)?,
+                status: row.get(3)?,
+                display_order: row.get(4)?,
+                estimated_minutes: row.get(5)?,
+                elapsed_focus_seconds: row.get(6)?,
+                created_at: row.get(7)?,
+                completed_at: row.get(8)?,
+            })
+        })?;
+
+        let mut tasks = Vec::new();
+        for task in rows {
+            tasks.push(task?);
+        }
+        Ok(tasks)
+    }
+
+    pub fn list_all_tasks(&self) -> Result<Vec<TaskRecord>> {
+        let conn = self.get_conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, day_plan_date, title, status, display_order, estimated_minutes, elapsed_focus_seconds, created_at, completed_at
+             FROM tasks ORDER BY display_order ASC, created_at ASC",
+        )?;
+
+        let rows = stmt.query_map([], |row| {
             Ok(TaskRecord {
                 id: row.get(0)?,
                 day_plan_date: row.get(1)?,

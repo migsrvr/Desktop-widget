@@ -79,6 +79,30 @@ export function useWorkpulseState() {
     }
   });
 
+  // Hydrate tasks directly from native SQLite database on mount
+  useEffect(() => {
+    let isMounted = true;
+    async function loadTasksFromDb() {
+      if (isTauri()) {
+        try {
+          const dbTasks = await invoke<Task[]>('get_tasks');
+          if (isMounted && Array.isArray(dbTasks) && dbTasks.length > 0) {
+            setTasks(dbTasks);
+            try {
+              localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(dbTasks));
+            } catch {}
+          }
+        } catch (err) {
+          console.warn('[WorkPulse] Could not read tasks from SQLite:', err);
+        }
+      }
+    }
+    loadTasksFromDb();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const [aiRun, setAiRun] = useState<AiRun | null>(INITIAL_AI_RUN);
   const [timeline, setTimeline] = useState<TimelineEvent[]>(INITIAL_TIMELINE);
 
@@ -222,6 +246,22 @@ export function useWorkpulseState() {
     return todaysTasks.filter((t) => t.status !== 'DONE').length;
   }, [todaysTasks]);
 
+  const persistTaskToDb = useCallback((task: Task) => {
+    if (isTauri()) {
+      invoke('save_task', { task }).catch((err) =>
+        console.error('[WorkPulse] SQLite save_task failed:', err)
+      );
+    }
+  }, []);
+
+  const removeTaskFromDb = useCallback((taskId: string) => {
+    if (isTauri()) {
+      invoke('remove_task', { taskId }).catch((err) =>
+        console.error('[WorkPulse] SQLite remove_task failed:', err)
+      );
+    }
+  }, []);
+
   const addTask = useCallback((title: string, preferredStatus?: TaskStatus) => {
     if (!title.trim()) return;
     const currentToday = getTodayDateStr();
@@ -240,6 +280,7 @@ export function useWorkpulseState() {
         elapsedFocusSeconds: 0,
         createdAt: new Date().toISOString(),
       };
+      persistTaskToDb(newTask);
       return [...prev, newTask];
     });
     haptics.hapticPop(320);
@@ -254,29 +295,35 @@ export function useWorkpulseState() {
       },
       ...prev,
     ]);
-  }, []);
+  }, [persistTaskToDb]);
 
   const setActiveTask = useCallback((taskId: string) => {
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === taskId) {
-          return { ...t, status: 'NOW' };
+          const updated = { ...t, status: 'NOW' as const };
+          persistTaskToDb(updated);
+          return updated;
         }
         if (t.status === 'NOW') {
-          return { ...t, status: 'NEXT' };
+          const updated = { ...t, status: 'NEXT' as const };
+          persistTaskToDb(updated);
+          return updated;
         }
         return t;
       })
     );
     haptics.snapClick();
-  }, []);
+  }, [persistTaskToDb]);
 
   const updateTaskStatus = useCallback((taskId: string, newStatus: TaskStatus) => {
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === taskId) {
           const completedAt = newStatus === 'DONE' ? new Date().toISOString() : undefined;
-          return { ...t, status: newStatus, completedAt };
+          const updated = { ...t, status: newStatus, completedAt };
+          persistTaskToDb(updated);
+          return updated;
         }
         return t;
       })
@@ -298,12 +345,13 @@ export function useWorkpulseState() {
     } else {
       haptics.hapticPop();
     }
-  }, []);
+  }, [persistTaskToDb]);
 
   const deleteTask = useCallback((taskId: string) => {
+    removeTaskFromDb(taskId);
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
     haptics.hapticPop(200);
-  }, []);
+  }, [removeTaskFromDb]);
 
   // Side flyout panel: Activity Log / Screen Operator extend to the LEFT
   // of the main column instead of stacking into one long widget.
@@ -794,6 +842,14 @@ export function useWorkpulseState() {
   const clearPastCompletedTasks = useCallback(() => {
     const currentToday = getTodayDateStr();
     setTasks((prev) => {
+      prev.forEach((t) => {
+        if (t.status === 'DONE') {
+          const isToday = t.completedAt ? t.completedAt.startsWith(currentToday) : t.dayPlanDate === currentToday;
+          if (!isToday) {
+            removeTaskFromDb(t.id);
+          }
+        }
+      });
       return prev.filter((t) => {
         if (t.status !== 'DONE') return true;
         if (t.completedAt) return t.completedAt.startsWith(currentToday);
@@ -811,12 +867,15 @@ export function useWorkpulseState() {
       },
       ...prev,
     ]);
-  }, []);
+  }, [removeTaskFromDb]);
 
   const clearAllCompletedTasks = useCallback(() => {
-    setTasks((prev) => prev.filter((t) => t.status !== 'DONE'));
+    setTasks((prev) => {
+      prev.filter((t) => t.status === 'DONE').forEach((t) => removeTaskFromDb(t.id));
+      return prev.filter((t) => t.status !== 'DONE');
+    });
     haptics.snapClick();
-  }, []);
+  }, [removeTaskFromDb]);
 
   return {
     tasks,

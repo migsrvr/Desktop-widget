@@ -23,8 +23,8 @@ export const TaskList: React.FC<TaskListProps> = ({
   const [newTitle, setNewTitle] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
-  const [isDoneCollapsed, setIsDoneCollapsed] = useState(true);
-  const [isPastCollapsed, setIsPastCollapsed] = useState(true);
+  const [isDoneCollapsed, setIsDoneCollapsed] = useState(false);
+  const [isPastCollapsed, setIsPastCollapsed] = useState(false);
 
   const handleSubmit = () => {
     if (newTitle.trim()) {

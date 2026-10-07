@@ -30,9 +30,12 @@ struct AppState {
 }
 
 #[tauri::command]
-fn get_tasks(state: State<AppState>, date: String) -> Result<Vec<TaskRecord>, String> {
+fn get_tasks(state: State<AppState>, date: Option<String>) -> Result<Vec<TaskRecord>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    db.list_tasks(&date).map_err(|e| e.to_string())
+    match date {
+        Some(d) if !d.is_empty() => db.list_tasks(&d).map_err(|e| e.to_string()),
+        _ => db.list_all_tasks().map_err(|e| e.to_string()),
+    }
 }
 
 #[tauri::command]
