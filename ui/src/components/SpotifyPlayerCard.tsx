@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SpotifyTrack, SpotifyPlaybackAction, formatTrackDuration } from '@workpulse/shared';
+import { SpotifyAsciiArt, ArtMode } from './SpotifyAsciiArt';
 
 interface SpotifyPlayerCardProps {
   track: SpotifyTrack | null;
@@ -38,6 +39,30 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
       } catch {}
       return next;
     });
+  };
+
+  // Original vs ASCII artwork mode (expanded cover only). Defaults to ASCII;
+  // falls back to Original automatically if conversion is unavailable.
+  const [artMode, setArtMode] = useState<ArtMode>(() => {
+    try {
+      return localStorage.getItem('workpulse:spotify_art_mode') === 'original' ? 'original' : 'ascii';
+    } catch {
+      return 'ascii';
+    }
+  });
+  const [asciiOk, setAsciiOk] = useState<boolean | null>(null);
+
+  // Re-arm ASCII availability when the track's artwork changes.
+  const artworkSrc = track?.albumArtUrl ?? null;
+  useEffect(() => {
+    setAsciiOk(null);
+  }, [artworkSrc]);
+
+  const selectArtMode = (mode: ArtMode) => {
+    setArtMode(mode);
+    try {
+      localStorage.setItem('workpulse:spotify_art_mode', mode);
+    } catch {}
   };
 
   // If not connected to Spotify yet
@@ -217,6 +242,41 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {artworkSrc && asciiOk !== false && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  borderRadius: 'var(--radius-pill)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  overflow: 'hidden',
+                }}
+                role="group"
+                aria-label="Artwork display mode"
+              >
+                {(['original', 'ascii'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => selectArtMode(mode)}
+                    aria-pressed={artMode === mode}
+                    title={mode === 'original' ? 'Show original cover' : 'Show ASCII cover'}
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      letterSpacing: '0.4px',
+                      textTransform: 'uppercase',
+                      padding: '2px 7px',
+                      background: artMode === mode ? '#ffffff' : 'transparent',
+                      border: 'none',
+                      color: artMode === mode ? '#000000' : 'var(--text-tertiary)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {mode === 'original' ? 'Original' : 'ASCII'}
+                  </button>
+                ))}
+              </div>
+            )}
             <button
               onClick={toggleArtworkExpanded}
               className="apple-btn-text"
@@ -260,31 +320,12 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
             flexShrink: 0,
           }}
         >
-          {track.albumArtUrl ? (
-            <img
-              src={track.albumArtUrl}
-              alt={track.album}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                display: 'block',
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 8,
-                color: 'var(--text-tertiary)',
-              }}
-            >
-              <span style={{ fontSize: 44 }}>♫</span>
-              <span style={{ fontSize: 11, fontWeight: 500 }}>Spotify Audio</span>
-            </div>
-          )}
+          <SpotifyAsciiArt
+            src={artworkSrc}
+            mode={artMode}
+            alt={track.album}
+            onAsciiStatus={setAsciiOk}
+          />
         </div>
 
         {/* Track Title and Artist */}
