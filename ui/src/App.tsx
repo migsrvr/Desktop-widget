@@ -63,8 +63,9 @@ export const App: React.FC = () => {
   });
 
   // Sticky-note behavior: edge magnet + fling-to-dock in DOCK mode.
+  // Strip flag is presence-only (boolean) so track polling never refires it.
   const { dockTopRight, isDocked } = useWindowMagnet(
-    `${viewMode}:${sidePanel ?? 'none'}`,
+    `${viewMode}:${sidePanel ?? 'none'}:${spotify.track ? 'spot' : 'nospot'}`,
     viewMode === 'DOCK'
   );
 
@@ -316,6 +317,8 @@ export const App: React.FC = () => {
           onCompleteActiveTask={completeActiveTask}
           onSelectViewMode={setViewMode}
           onOpenIde={handleOpenIde}
+          spotifyTrack={spotify.track}
+          onSpotifyControl={spotify.controlPlayback}
         />
       )}
 

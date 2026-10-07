@@ -1,6 +1,7 @@
 import React from 'react';
-import { Task, ViewMode, formatCountdown } from '@workpulse/shared';
+import { Task, ViewMode, formatCountdown, SpotifyTrack, SpotifyPlaybackAction } from '@workpulse/shared';
 import { TransportBar } from './TransportBar';
+import { SpotifyMiniStrip } from './SpotifyMiniStrip';
 
 interface FocusViewProps {
   activeTask: Task | null;
@@ -13,6 +14,8 @@ interface FocusViewProps {
   onCompleteActiveTask: () => void;
   onSelectViewMode: (mode: ViewMode) => void;
   onOpenIde?: () => void;
+  spotifyTrack?: SpotifyTrack | null;
+  onSpotifyControl?: (action: SpotifyPlaybackAction) => void;
 }
 
 export const FocusView: React.FC<FocusViewProps> = ({
@@ -26,6 +29,8 @@ export const FocusView: React.FC<FocusViewProps> = ({
   onCompleteActiveTask,
   onSelectViewMode,
   onOpenIde,
+  spotifyTrack,
+  onSpotifyControl,
 }) => {
   const targetTotalSeconds = targetMinutes * 60;
   const remainingSeconds = Math.max(0, targetTotalSeconds - focusSeconds);
@@ -128,6 +133,11 @@ export const FocusView: React.FC<FocusViewProps> = ({
           {countdownStr}
         </span>
       </div>
+
+      {/* Spotify mini player — only when a track is loaded */}
+      {spotifyTrack && onSpotifyControl && (
+        <SpotifyMiniStrip track={spotifyTrack} onControl={onSpotifyControl} />
+      )}
 
       {/* Transport Bar */}
       <TransportBar

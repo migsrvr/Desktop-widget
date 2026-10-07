@@ -12,6 +12,7 @@ import {
   DOCK_HEIGHT,
   FOCUS_WIDTH,
   FOCUS_HEIGHT,
+  FOCUS_HEIGHT_SPOTIFY,
   STORAGE_KEY_BOARD_GEOMETRY,
   WindowGeometry,
   MonitorBounds,
@@ -395,7 +396,11 @@ export function useWorkpulseState() {
 
   // Dynamically set window dimensions according to viewMode:
   // - BOARD: ~1340x800, centered on the current monitor.
-  // - DOCK / FOCUS: 420x280 focus mode, docked to top-right of the current monitor.
+  // - DOCK / FOCUS: 420x280 focus mode (420x330 while the Spotify strip
+  //   is up), docked to top-right of the current monitor.
+  // Strip visibility is a boolean so track polling never refires the resize.
+  const hasFocusStrip =
+    (viewMode === 'DOCK' || viewMode === 'FOCUS') && spotify.track != null;
   useEffect(() => {
     if (!isTauri()) return;
 
@@ -412,7 +417,8 @@ export function useWorkpulseState() {
 
         if (viewMode === 'DOCK' || viewMode === 'FOCUS') {
           // Dock goes to the top-right corner of the monitor
-          const target = getFocusDockedGeometry(monBounds, FOCUS_WIDTH, FOCUS_HEIGHT, 16);
+          const dockH = hasFocusStrip ? FOCUS_HEIGHT_SPOTIFY : FOCUS_HEIGHT;
+          const target = getFocusDockedGeometry(monBounds, FOCUS_WIDTH, dockH, 16);
           markProgrammaticWindowMove();
           await win.setSize(new LogicalSize(target.width, target.height));
           await win.setPosition(new LogicalPosition(target.x, target.y));
@@ -432,12 +438,12 @@ export function useWorkpulseState() {
         await win.setPosition(new LogicalPosition(target.x, target.y));
       } catch {
         const isDock = viewMode === 'DOCK' || viewMode === 'FOCUS';
-        const targetH = isDock ? FOCUS_HEIGHT : DEFAULT_BOARD_HEIGHT;
+        const targetH = isDock ? (hasFocusStrip ? FOCUS_HEIGHT_SPOTIFY : FOCUS_HEIGHT) : DEFAULT_BOARD_HEIGHT;
         const targetW = isDock ? FOCUS_WIDTH : DEFAULT_BOARD_WIDTH;
         invoke('set_widget_size', { width: targetW, height: targetH }).catch(() => {});
       }
     })();
-  }, [viewMode]);
+  }, [viewMode, hasFocusStrip]);
 
   // Persist user-adjusted Board window dimensions and position when resized or dragged
   useEffect(() => {

@@ -9,6 +9,7 @@ import {
   DOCK_HEIGHT,
   FOCUS_WIDTH,
   FOCUS_HEIGHT,
+  FOCUS_HEIGHT_SPOTIFY,
   MonitorBounds,
   WindowGeometry,
 } from './windowGeometry';
@@ -71,5 +72,10 @@ describe('windowGeometry', () => {
     expect(DOCK_HEIGHT).toBe(280);
     expect(FOCUS_WIDTH).toBe(420);
     expect(FOCUS_HEIGHT).toBe(280);
+  });
+
+  it('grows Focus / Dock to 420x330 while the Spotify strip is visible', () => {
+    expect(FOCUS_HEIGHT_SPOTIFY).toBe(330);
+    expect(FOCUS_HEIGHT_SPOTIFY).toBeGreaterThan(FOCUS_HEIGHT);
   });
 });

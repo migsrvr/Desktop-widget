@@ -16,6 +16,8 @@ export const DEFAULT_BOARD_WIDTH = 1340;
 export const DEFAULT_BOARD_HEIGHT = 800;
 export const FOCUS_WIDTH = 420;
 export const FOCUS_HEIGHT = 280;
+/** Focus window height while the Spotify mini strip is visible (measured: 326 content + 4 air). */
+export const FOCUS_HEIGHT_SPOTIFY = 330;
 export const DOCK_WIDTH = 420;
 export const DOCK_HEIGHT = 280;
 export const DOCK_MARGIN = 16;
