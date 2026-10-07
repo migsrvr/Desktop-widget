@@ -59,6 +59,7 @@ interface ExpandedPanelProps {
   spotifyTrack?: SpotifyTrack | null;
   isSpotifyConnected?: boolean;
   isSpotifyConnecting?: boolean;
+  spotifyAccountType?: string | null;
   onOpenSpotifySetup?: () => void;
   onSpotifyControl?: (action: SpotifyPlaybackAction) => void;
   onDetectSpotifyLocal?: () => void;
@@ -109,6 +110,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   spotifyTrack,
   isSpotifyConnected,
   isSpotifyConnecting,
+  spotifyAccountType,
   onOpenSpotifySetup,
   onSpotifyControl,
   onDetectSpotifyLocal,
@@ -436,6 +438,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
                 onOpenSetup={onOpenSpotifySetup ?? (() => {})}
                 onControl={onSpotifyControl ?? (() => {})}
                 onDetectLocal={onDetectSpotifyLocal}
+                accountType={spotifyAccountType}
               />
             </div>
           </div>

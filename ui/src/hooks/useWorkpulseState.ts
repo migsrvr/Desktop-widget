@@ -115,7 +115,7 @@ export function useWorkpulseState() {
   });
 
   const isExpanded = viewMode !== 'DOCK';
-  const [isAlwaysOnTop, setIsAlwaysOnTop] = useState<boolean>(true);
+  const [isAlwaysOnTop, setIsAlwaysOnTop] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
 
   // Focus Timer State (Daily scoped)

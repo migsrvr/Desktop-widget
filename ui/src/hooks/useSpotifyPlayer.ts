@@ -10,6 +10,7 @@ interface SpotifyStatusResponse {
   isConnected: boolean;
   clientId?: string;
   track?: SpotifyTrack;
+  accountType?: string | null;
 }
 
 export function useSpotifyPlayer() {
@@ -33,6 +34,7 @@ export function useSpotifyPlayer() {
       setAuthStatus({
         isConnected: res.isConnected,
         clientId: res.clientId,
+        accountType: res.accountType ?? undefined,
       });
       setTrack(res.track ?? null);
       setError(null);

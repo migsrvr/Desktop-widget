@@ -178,6 +178,35 @@ pub async fn refresh_access_token(
         .map_err(|e| format!("Failed to parse refresh response: {}", e))
 }
 
+/// Returns the Spotify account product for a token: "premium" | "free" | "open".
+/// Used once per login (then persisted) to unlock Premium-only treatment.
+pub async fn fetch_user_product(access_token: &str) -> Result<String, String> {
+    let client = reqwest::Client::new();
+    let resp = client
+        .get("https://api.spotify.com/v1/me")
+        .header(AUTHORIZATION, format!("Bearer {}", access_token))
+        .send()
+        .await
+        .map_err(|e| format!("Network error fetching Spotify profile: {}", e))?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        return Err(format!("Spotify profile error ({}): {}", status, text));
+    }
+
+    let val = resp
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|e| format!("Failed to parse profile JSON: {}", e))?;
+
+    Ok(val
+        .get("product")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string())
+}
+
 pub async fn fetch_current_playback(
     access_token: &str,
 ) -> Result<Option<SpotifyTrackDto>, String> {
@@ -293,6 +322,45 @@ pub async fn execute_player_action(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn auth_url_carries_all_query_params_intact() {
+        // Regression test: the authorize URL must survive `cmd /c start`
+        // on Windows, where a bare `&` would truncate the query string
+        // (Spotify then errors with "response_type must be code").
+        let url = start_auth_session("test-client-id-123".to_string());
+
+        assert!(url.starts_with("https://accounts.spotify.com/authorize?"));
+
+        // The query string must be one `?` + `&`-joined params — not cut short.
+        let query = url.split('?').nth(1).expect("authorize URL has a query string");
+        let parts: Vec<&str> = query.split('&').collect();
+        assert_eq!(parts.len(), 6, "expected 6 query params, got: {}", query);
+
+        let get = |key: &str| {
+            parts
+                .iter()
+                .find(|p| p.starts_with(&format!("{}=", key)))
+                .unwrap_or_else(|| panic!("missing query param '{}' in: {}", key, query))
+                .trim_start_matches(&format!("{}=", key))
+                .to_string()
+        };
+
+        assert_eq!(get("client_id"), "test-client-id-123");
+        assert_eq!(get("response_type"), "code");
+        assert_eq!(get("redirect_uri"), urlencoding::encode(SPOTIFY_REDIRECT_URI));
+        assert_eq!(get("code_challenge_method"), "S256");
+        assert!(!get("code_challenge").is_empty());
+        assert!(get("scope").contains("user-read-playback-state"));
+
+        // A fresh session stores the verifier for the later token exchange.
+        assert!(take_pending_auth().is_some());
+    }
 }
 
 mod urlencoding {

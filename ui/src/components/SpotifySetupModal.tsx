@@ -12,6 +12,8 @@ interface SpotifySetupModalProps {
   onConnect: (clientId: string) => void;
   onDisconnect: () => void;
   onDetectLocal?: () => void;
+  /** Spotify account product ("premium" unlocks full Web API control). */
+  accountType?: string | null;
 }
 
 export const SpotifySetupModal: React.FC<SpotifySetupModalProps> = ({
@@ -25,8 +27,18 @@ export const SpotifySetupModal: React.FC<SpotifySetupModalProps> = ({
   onConnect,
   onDisconnect,
   onDetectLocal,
+  accountType,
 }) => {
+  const isPremium = accountType === 'premium';
   const [activeTab, setActiveTab] = useState<'local' | 'webapi'>('local');
+  const [hasChosenTab, setHasChosenTab] = useState(false);
+  // Premium accounts get full Web API control — land them on that tab
+  // unless they explicitly picked one.
+  const effectiveTab = isPremium && !hasChosenTab ? 'webapi' : activeTab;
+  const selectTab = (tab: 'local' | 'webapi') => {
+    setHasChosenTab(true);
+    setActiveTab(tab);
+  };
   const [clientIdInput, setClientIdInput] = useState(activeClientId || '');
   const [copied, setCopied] = useState(false);
   const [isDetecting, setIsDetecting] = useState(false);
@@ -123,16 +135,16 @@ export const SpotifySetupModal: React.FC<SpotifySetupModalProps> = ({
         <div className="apple-segmented-container" style={{ padding: 2 }}>
           <button
             type="button"
-            onClick={() => setActiveTab('local')}
-            className={`apple-segmented-item ${activeTab === 'local' ? 'active' : ''}`}
+            onClick={() => selectTab('local')}
+            className={`apple-segmented-item ${effectiveTab === 'local' ? 'active' : ''}`}
             style={{ flex: 1, fontSize: 11, padding: '5px 0' }}
           >
             Desktop App (Free)
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('webapi')}
-            className={`apple-segmented-item ${activeTab === 'webapi' ? 'active' : ''}`}
+            onClick={() => selectTab('webapi')}
+            className={`apple-segmented-item ${effectiveTab === 'webapi' ? 'active' : ''}`}
             style={{ flex: 1, fontSize: 11, padding: '5px 0' }}
           >
             Web API (Developer)
@@ -140,7 +152,7 @@ export const SpotifySetupModal: React.FC<SpotifySetupModalProps> = ({
         </div>
 
         {/* TAB 1: Local Desktop App (Free Account Bypass) */}
-        {activeTab === 'local' && (
+        {effectiveTab === 'local' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div
               style={{
@@ -246,11 +258,43 @@ export const SpotifySetupModal: React.FC<SpotifySetupModalProps> = ({
         )}
 
         {/* TAB 2: Web API (Developer Dashboard PKCE Flow) */}
-        {activeTab === 'webapi' && (
+        {effectiveTab === 'webapi' && (
           <form onSubmit={handleSubmitWebApi} style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
             <p style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4, margin: 0 }}>
               Connect Spotify Web API for cross-device cloud sync (requires a Spotify Developer App and Spotify Premium).
             </p>
+            {isPremium && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 10px',
+                  borderRadius: 'var(--radius-sm, 8px)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.07)',
+                  border: '1px solid rgba(255, 255, 255, 0.14)',
+                  fontSize: 11,
+                  color: '#ffffff',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 700,
+                    letterSpacing: '0.6px',
+                    color: '#000000',
+                    backgroundColor: '#ffffff',
+                    padding: '1px 6px',
+                    borderRadius: 'var(--radius-pill)',
+                  }}
+                >
+                  PREMIUM
+                </span>
+                <span style={{ color: 'var(--text-secondary)' }}>
+                  Premium active — full play, pause & skip control enabled.
+                </span>
+              </div>
+            )}
 
             {/* Step 1 & 2 Instructions */}
             <div

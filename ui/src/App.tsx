@@ -197,6 +197,7 @@ export const App: React.FC = () => {
             spotifyTrack={spotify.track}
             isSpotifyConnected={spotify.authStatus.isConnected}
             isSpotifyConnecting={spotify.isConnecting}
+            spotifyAccountType={spotify.authStatus.accountType}
             onOpenSpotifySetup={() => setIsSpotifyModalOpen(true)}
             onSpotifyControl={spotify.controlPlayback}
             onDetectSpotifyLocal={spotify.detectLocal}
@@ -324,6 +325,7 @@ export const App: React.FC = () => {
         onClose={() => setIsSpotifyModalOpen(false)}
         isConnected={spotify.authStatus.isConnected}
         activeClientId={spotify.authStatus.clientId}
+        accountType={spotify.authStatus.accountType}
         track={spotify.track}
         isConnecting={spotify.isConnecting}
         error={spotify.error}

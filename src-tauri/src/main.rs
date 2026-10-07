@@ -22,6 +22,7 @@ pub struct SpotifyStatusResponse {
     pub is_connected: bool,
     pub client_id: Option<String>,
     pub track: Option<spotify::SpotifyTrackDto>,
+    pub account_type: Option<String>,
 }
 
 struct AppState {
@@ -97,8 +98,15 @@ async fn spotify_start_login(client_id: String) -> Result<String, String> {
     let auth_url = spotify::start_auth_session(trimmed_id.to_string());
     #[cfg(target_os = "windows")]
     {
-        let _ = std::process::Command::new("cmd")
-            .args(["/c", "start", "", &auth_url])
+        // NOTE: open the URL via rundll32, not `cmd /c start`. `start`
+        // cannot be given this URL safely: a bare `&` is a cmd command
+        // separator (truncates the query string → Spotify's
+        // "response_type must be code" error), while a pre-quoted URL gets
+        // double-escaped by Rust's own argv quoting and `start` then treats
+        // it as a file path ("Windows cannot find ..."). rundll32 receives
+        // the URL as a single verbatim argv argument — no shell involved.
+        let _ = std::process::Command::new("rundll32")
+            .args(["url.dll,FileProtocolHandler", &auth_url])
             .spawn();
     }
     Ok(auth_url)
@@ -127,12 +135,31 @@ async fn spotify_get_status(state: State<'_, AppState>) -> Result<SpotifyStatusR
             }
         }
 
+        // Backfill account product once for logins predating account_type
+        // (premium unlocks full Web API control; persisted so we fetch once).
+        if auth.account_type.is_empty() {
+            if let Ok(product) = spotify::fetch_user_product(&auth.access_token).await {
+                if !product.is_empty() {
+                    auth.account_type = product;
+                    if let Ok(db) = state.db.lock() {
+                        let _ = db.save_spotify_auth(&auth);
+                    }
+                }
+            }
+        }
+        let account_type = if auth.account_type.is_empty() {
+            None
+        } else {
+            Some(auth.account_type.clone())
+        };
+
         // Try Web API first
         if let Ok(Some(track)) = spotify::fetch_current_playback(&auth.access_token).await {
             return Ok(SpotifyStatusResponse {
                 is_connected: true,
                 client_id: Some(auth.client_id),
                 track: Some(track),
+                account_type: account_type.clone(),
             });
         }
 
@@ -143,6 +170,7 @@ async fn spotify_get_status(state: State<'_, AppState>) -> Result<SpotifyStatusR
                 is_connected: true,
                 client_id: Some(auth.client_id),
                 track: Some(local_track),
+                account_type: account_type.clone(),
             });
         }
 
@@ -150,6 +178,7 @@ async fn spotify_get_status(state: State<'_, AppState>) -> Result<SpotifyStatusR
             is_connected: true,
             client_id: Some(auth.client_id),
             track: None,
+            account_type,
         });
     }
 
@@ -159,6 +188,7 @@ async fn spotify_get_status(state: State<'_, AppState>) -> Result<SpotifyStatusR
             is_connected: true,
             client_id: None,
             track: Some(local_track),
+            account_type: None,
         });
     }
 
@@ -166,6 +196,7 @@ async fn spotify_get_status(state: State<'_, AppState>) -> Result<SpotifyStatusR
         is_connected: false,
         client_id: None,
         track: None,
+        account_type: None,
     })
 }
 
@@ -382,7 +413,8 @@ fn main() {
                     }
                     "pin" => {
                         if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.set_always_on_top(true);
+                            let currently_on_top = window.is_always_on_top().unwrap_or(false);
+                            let _ = window.set_always_on_top(!currently_on_top);
                         }
                     }
                     "quit" => {

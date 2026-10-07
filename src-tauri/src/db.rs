@@ -55,6 +55,8 @@ pub struct SpotifyAuthRecord {
     pub access_token: String,
     pub refresh_token: String,
     pub expires_at: i64,
+    /// Spotify account product: "premium" | "free" | "open" | "" (unknown).
+    pub account_type: String,
 }
 
 #[allow(dead_code)]
@@ -148,6 +150,7 @@ impl Database {
                 access_token TEXT NOT NULL,
                 refresh_token TEXT NOT NULL,
                 expires_at INTEGER NOT NULL,
+                account_type TEXT NOT NULL DEFAULT '',
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -201,6 +204,13 @@ impl Database {
             );
             ",
         )?;
+
+        // Migration for databases created before account_type existed.
+        // ALTER fails with "duplicate column name" when already applied — safe to ignore.
+        let _ = conn.execute(
+            "ALTER TABLE spotify_auth ADD COLUMN account_type TEXT NOT NULL DEFAULT ''",
+            [],
+        );
 
         Ok(Database { db_path })
     }
@@ -348,15 +358,16 @@ impl Database {
     pub fn save_spotify_auth(&self, auth: &SpotifyAuthRecord) -> Result<()> {
         let conn = self.get_conn()?;
         conn.execute(
-            "INSERT INTO spotify_auth (id, client_id, access_token, refresh_token, expires_at, updated_at)
-             VALUES (1, ?1, ?2, ?3, ?4, CURRENT_TIMESTAMP)
+            "INSERT INTO spotify_auth (id, client_id, access_token, refresh_token, expires_at, account_type, updated_at)
+             VALUES (1, ?1, ?2, ?3, ?4, ?5, CURRENT_TIMESTAMP)
              ON CONFLICT(id) DO UPDATE SET
                  client_id = excluded.client_id,
                  access_token = excluded.access_token,
                  refresh_token = excluded.refresh_token,
                  expires_at = excluded.expires_at,
+                 account_type = excluded.account_type,
                  updated_at = CURRENT_TIMESTAMP",
-            params![auth.client_id, auth.access_token, auth.refresh_token, auth.expires_at],
+            params![auth.client_id, auth.access_token, auth.refresh_token, auth.expires_at, auth.account_type],
         )?;
         Ok(())
     }
@@ -365,7 +376,7 @@ impl Database {
     pub fn get_spotify_auth(&self) -> Result<Option<SpotifyAuthRecord>> {
         let conn = self.get_conn()?;
         let mut stmt = conn.prepare(
-            "SELECT client_id, access_token, refresh_token, expires_at FROM spotify_auth WHERE id = 1",
+            "SELECT client_id, access_token, refresh_token, expires_at, account_type FROM spotify_auth WHERE id = 1",
         )?;
 
         let mut rows = stmt.query([])?;
@@ -375,6 +386,7 @@ impl Database {
                 access_token: row.get(1)?,
                 refresh_token: row.get(2)?,
                 expires_at: row.get(3)?,
+                account_type: row.get(4).unwrap_or_default(),
             }))
         } else {
             Ok(None)

@@ -8,6 +8,8 @@ interface SpotifyPlayerCardProps {
   onOpenSetup: () => void;
   onControl: (action: SpotifyPlaybackAction) => void;
   onDetectLocal?: () => void;
+  /** Spotify account product ("premium" unlocks full Web API control). */
+  accountType?: string | null;
 }
 
 export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
@@ -17,6 +19,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
   onOpenSetup,
   onControl,
   onDetectLocal,
+  accountType,
 }) => {
   const [isArtworkExpanded, setIsArtworkExpanded] = useState<boolean>(() => {
     try {
@@ -70,7 +73,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
               Spotify Audio
             </span>
             <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-              Free Desktop & Web API
+              {accountType === 'premium' ? 'Premium · Full Web API control' : 'Free Desktop & Web API'}
             </span>
           </div>
         </div>
@@ -195,6 +198,22 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
             >
               Now Playing
             </span>
+            {accountType === 'premium' && (
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 700,
+                  letterSpacing: '0.6px',
+                  color: '#000000',
+                  backgroundColor: '#ffffff',
+                  padding: '1px 6px',
+                  borderRadius: 'var(--radius-pill)',
+                }}
+                title="Spotify Premium — full Web API control enabled"
+              >
+                PREMIUM
+              </span>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -227,7 +246,7 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
         {/* Album Artwork Box — capped so the column never scrolls */}
         <div
           style={{
-            width: 'min(100%, 170px)',
+            width: 'min(100%, 150px)',
             aspectRatio: '1 / 1',
             margin: '0 auto',
             borderRadius: '12px',
@@ -323,103 +342,108 @@ export const SpotifyPlayerCard: React.FC<SpotifyPlayerCardProps> = ({
           )}
         </div>
 
-        {/* Progress Bar (when duration is known) */}
-        {track.durationMs > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
-            <div
+        {/* Compact transport strip: controls + progress in one row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+            <button
+              onClick={() => onControl('PREVIOUS')}
+              className="apple-btn-text"
               style={{
-                height: 4,
-                width: '100%',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                borderRadius: 'var(--radius-pill)',
-                overflow: 'hidden',
+                width: 26,
+                height: 26,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 11,
+                padding: 0,
+                backgroundColor: 'rgba(255, 255, 255, 0.06)',
               }}
+              title="Previous Track"
             >
+              ⏮
+            </button>
+            <button
+              onClick={() => onControl(track.isPlaying ? 'PAUSE' : 'PLAY')}
+              className="apple-btn-text"
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 13,
+                padding: 0,
+                color: '#ffffff',
+                backgroundColor: 'rgba(255, 255, 255, 0.18)',
+                borderColor: 'rgba(255, 255, 255, 0.28)',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+              }}
+              title={track.isPlaying ? 'Pause' : 'Play'}
+            >
+              {track.isPlaying ? '⏸' : '▶'}
+            </button>
+            <button
+              onClick={() => onControl('NEXT')}
+              className="apple-btn-text"
+              style={{
+                width: 26,
+                height: 26,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 11,
+                padding: 0,
+                backgroundColor: 'rgba(255, 255, 255, 0.06)',
+              }}
+              title="Next Track"
+            >
+              ⏭
+            </button>
+          </div>
+
+          {track.durationMs > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1, minWidth: 0 }}>
               <div
                 style={{
-                  height: '100%',
-                  width: `${progressPercent}%`,
-                  backgroundColor: '#ffffff',
+                  height: 4,
+                  width: '100%',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
                   borderRadius: 'var(--radius-pill)',
-                  transition: 'width 0.4s linear',
+                  overflow: 'hidden',
                 }}
-              />
+              >
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${progressPercent}%`,
+                    backgroundColor: '#ffffff',
+                    borderRadius: 'var(--radius-pill)',
+                    transition: 'width 0.4s linear',
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: 10,
+                  color: 'var(--text-tertiary)',
+                  fontFamily: 'JetBrains Mono, SF Mono, monospace',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                <span>{formatTrackDuration(track.progressMs)}</span>
+                <span>{formatTrackDuration(track.durationMs)}</span>
+              </div>
             </div>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontSize: 11,
-                color: 'var(--text-tertiary)',
-                fontFamily: 'JetBrains Mono, SF Mono, monospace',
-                fontVariantNumeric: 'tabular-nums',
-              }}
-            >
-              <span>{formatTrackDuration(track.progressMs)}</span>
-              <span>{formatTrackDuration(track.durationMs)}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Large Tactile Transport Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 0 }}>
-          <button
-            onClick={() => onControl('PREVIOUS')}
-            className="apple-btn-text"
-            style={{
-              width: 30,
-              height: 30,
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 14,
-              padding: 0,
-              backgroundColor: 'rgba(255, 255, 255, 0.06)',
-            }}
-            title="Previous Track"
-          >
-            ⏮
-          </button>
-          <button
-            onClick={() => onControl(track.isPlaying ? 'PAUSE' : 'PLAY')}
-            className="apple-btn-text"
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 15,
-              padding: 0,
-              color: '#ffffff',
-              backgroundColor: 'rgba(255, 255, 255, 0.18)',
-              borderColor: 'rgba(255, 255, 255, 0.28)',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
-            }}
-            title={track.isPlaying ? 'Pause' : 'Play'}
-          >
-            {track.isPlaying ? '⏸' : '▶'}
-          </button>
-          <button
-            onClick={() => onControl('NEXT')}
-            className="apple-btn-text"
-            style={{
-              width: 30,
-              height: 30,
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 12,
-              padding: 0,
-              backgroundColor: 'rgba(255, 255, 255, 0.06)',
-            }}
-            title="Next Track"
-          >
-            ⏭
-          </button>
+          ) : (
+            <span style={{ fontSize: 10, color: 'var(--text-tertiary)', flex: 1 }}>
+              {track.isPlaying ? 'Playing' : 'Paused'}
+            </span>
+          )}
         </div>
       </div>
     );

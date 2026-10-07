@@ -19,7 +19,7 @@
         "minHeight": 48,
         "decorations": false,
         "transparent": true,
-        "alwaysOnTop": true,
+        "alwaysOnTop": false,
         "resizable": true,
         "shadow": false,
         "visible": true,

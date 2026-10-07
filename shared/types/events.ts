@@ -365,6 +365,8 @@ export interface SpotifyAuthStatus {
   isConnected: boolean;
   clientId?: string;
   userDisplayName?: string;
+  /** Spotify account product: "premium" | "free" | "open" (absent when unknown). */
+  accountType?: string;
 }
 
 /**

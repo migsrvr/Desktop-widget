@@ -262,11 +262,16 @@ async fn spotify_callback_handler(
             match crate::spotify::exchange_code(&code, &pending.client_id, &pending.code_verifier).await {
                 Ok(token_resp) => {
                     let now = chrono::Utc::now().timestamp();
+                    // Fetch account product once at login (premium unlocks full Web API control).
+                    let account_type = crate::spotify::fetch_user_product(&token_resp.access_token)
+                        .await
+                        .unwrap_or_default();
                     let record = crate::db::SpotifyAuthRecord {
                         client_id: pending.client_id.clone(),
                         access_token: token_resp.access_token,
                         refresh_token: token_resp.refresh_token.unwrap_or_default(),
                         expires_at: now + token_resp.expires_in,
+                        account_type,
                     };
 
                     if let Ok(db) = crate::db::Database::init() {
