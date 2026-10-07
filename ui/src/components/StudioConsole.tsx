@@ -124,7 +124,6 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
         style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr 1fr',
-          divideX: '1px solid var(--session-border)',
           width: '100%',
         }}
       >

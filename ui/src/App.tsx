@@ -201,7 +201,7 @@ export const App: React.FC = () => {
             operatorFrame={operator.lastFrame}
             operatorInference={operator.inference}
             operatorProposal={operator.proposal}
-            operatorThumbUrl={operatorThumbUrl}
+            operatorThumbUrl={operator.thumbUrl}
             onToggleOperatorWatching={() => operator.toggleWatching()}
             onOperatorModeChange={operator.setMode}
             onOperatorCapture={operator.captureNow}
