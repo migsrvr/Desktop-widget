@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "WorkPulse",
+  "productName": "SESSION",
   "version": "0.1.0",
   "identifier": "com.workpulse.companion",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "WorkPulse",
+        "title": "SESSION",
         "width": 420,
         "height": 600,
         "decorations": false,

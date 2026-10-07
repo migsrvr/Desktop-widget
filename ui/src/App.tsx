@@ -5,6 +5,7 @@ import { useWindowMagnet } from './hooks/useWindowMagnet';
 import { useOperator } from './hooks/useOperator';
 import { CollapsedPill } from './components/CollapsedPill';
 import { ExpandedPanel } from './components/ExpandedPanel';
+import { FocusView } from './components/FocusView';
 import { SpotifySetupModal } from './components/SpotifySetupModal';
 
 export const App: React.FC = () => {
@@ -18,7 +19,6 @@ export const App: React.FC = () => {
     completionPercentage,
     todaysDoneCount,
     todaysRemainingCount,
-    isExpanded,
     isAlwaysOnTop,
     minimizeToTaskbar,
     isMuted,
@@ -31,6 +31,9 @@ export const App: React.FC = () => {
     updateTaskStatus,
     deleteTask,
     clearPastCompletedTasks,
+    completeActiveTask,
+    viewMode,
+    setViewMode,
     toggleExpanded,
     toggleAlwaysOnTop,
     toggleMute,
@@ -60,9 +63,8 @@ export const App: React.FC = () => {
   });
 
   // Sticky-note behavior: edge magnet + fling-to-dock top-right.
-  // The layout key also refreshes window metrics when a side flyout opens.
   const { dockTopRight, isDocked } = useWindowMagnet(
-    `${isExpanded ? 'open' : 'pill'}:${sidePanel ?? 'none'}`
+    `${viewMode}:${sidePanel ?? 'none'}`
   );
 
   const [showSimMenu, setShowSimMenu] = useState(false);
@@ -131,7 +133,7 @@ export const App: React.FC = () => {
       type: 'widget/open_task_in_ide',
       payload: {
         taskId: activeTask ? activeTask.id : 'unknown',
-        taskTitle: activeTask ? activeTask.title : 'WorkPulse Active Task',
+        taskTitle: activeTask ? activeTask.title : 'SESSION Active Task',
       },
     });
   };
@@ -144,12 +146,13 @@ export const App: React.FC = () => {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'flex-start',
-        padding: isExpanded ? 6 : 2,
+        padding: viewMode === 'BOARD' ? 6 : 2,
         boxSizing: 'border-box',
         overflow: 'hidden',
       }}
     >
-      {isExpanded ? (
+      {/* View Mode Router: BOARD vs FOCUS vs DOCK */}
+      {viewMode === 'BOARD' && (
         <>
           <ExpandedPanel
             tasks={todaysTasks}
@@ -165,6 +168,7 @@ export const App: React.FC = () => {
             isTimerRunning={isTimerRunning}
             focusSeconds={focusSeconds}
             targetMinutes={targetMinutes}
+            viewMode={viewMode}
             onCollapse={toggleExpanded}
             onDockTopRight={dockTopRight}
             isDocked={isDocked}
@@ -179,6 +183,8 @@ export const App: React.FC = () => {
             onDeleteTask={deleteTask}
             onAddTask={addTask}
             onClearPastTasks={clearPastCompletedTasks}
+            onCompleteActiveTask={completeActiveTask}
+            onSelectViewMode={setViewMode}
             onOpenIde={handleOpenIde}
             isBridgeConnected={isConnected}
             sidePanel={sidePanel}
@@ -195,7 +201,7 @@ export const App: React.FC = () => {
             operatorFrame={operator.lastFrame}
             operatorInference={operator.inference}
             operatorProposal={operator.proposal}
-            operatorThumbUrl={operator.thumbUrl}
+            operatorThumbUrl={operatorThumbUrl}
             onToggleOperatorWatching={() => operator.toggleWatching()}
             onOperatorModeChange={operator.setMode}
             onOperatorCapture={operator.captureNow}
@@ -203,101 +209,113 @@ export const App: React.FC = () => {
             onOperatorDeny={operator.deny}
           />
 
-          {/* Dev-only telemetry simulator — stripped from production builds */}
+          {/* Dev-only telemetry simulator */}
           {import.meta.env.DEV && (
-          <div
-            style={{
-              marginTop: 6,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 10,
-              color: 'var(--text-tertiary)',
-              paddingLeft: 4,
-            }}
-          >
             <div
               style={{
-                display: 'inline-flex',
+                marginTop: 6,
+                display: 'flex',
                 alignItems: 'center',
-                gap: 5,
-                padding: '2px 8px',
-                borderRadius: 'var(--radius-pill)',
-                backgroundColor: 'rgba(0, 0, 0, 0.25)',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
-              }}
-            >
-              <span
-                style={{
-                  width: 5,
-                  height: 5,
-                  borderRadius: '50%',
-                  backgroundColor: isConnected ? '#ffffff' : 'rgba(255, 255, 255, 0.3)',
-                }}
-              />
-              <span style={{ color: 'var(--text-secondary)' }}>
-                {isConnected ? 'Bridge Online' : 'Bridge Offline'}
-              </span>
-            </div>
-
-            <button
-              onClick={() => setShowSimMenu(!showSimMenu)}
-              style={{
+                gap: 6,
                 fontSize: 10,
-                color: 'var(--text-tertiary)',
-                padding: '2px 6px',
-                borderRadius: 'var(--radius-pill)',
-                backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                color: 'var(--session-text-secondary)',
+                paddingLeft: 4,
               }}
             >
-              {showSimMenu ? 'Hide' : 'Test AI'}
-            </button>
-
-            {showSimMenu && (
               <div
                 style={{
                   display: 'inline-flex',
-                  gap: 4,
-                  backgroundColor: 'rgba(0, 0, 0, 0.35)',
-                  padding: '2px 6px',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '2px 8px',
                   borderRadius: 'var(--radius-pill)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  backgroundColor: 'var(--session-surface)',
+                  border: '1px solid var(--session-border)',
                 }}
               >
-                <button
-                  onClick={handleSimulateAiStart}
-                  className="apple-btn-text"
-                  style={{ fontSize: 9, padding: '2px 6px' }}
-                >
-                  Start
-                </button>
-                <button
-                  onClick={handleSimulateAiWaiting}
-                  className="apple-btn-text"
-                  style={{ fontSize: 9, padding: '2px 6px' }}
-                >
-                  Approval
-                </button>
-                <button
-                  onClick={handleSimulateAiDone}
-                  className="apple-btn-text"
-                  style={{ fontSize: 9, padding: '2px 6px' }}
-                >
-                  Done
-                </button>
-                <button
-                  onClick={handleSimulateVision}
-                  className="apple-btn-text"
-                  style={{ fontSize: 9, padding: '2px 6px' }}
-                >
-                  Vision
-                </button>
+                <span
+                  style={{
+                    width: 5,
+                    height: 5,
+                    borderRadius: '50%',
+                    backgroundColor: isConnected ? '#FFFFFF' : 'rgba(255, 255, 255, 0.3)',
+                  }}
+                />
+                <span className="session-mono" style={{ color: 'var(--session-text-secondary)' }}>
+                  {isConnected ? 'Bridge Online' : 'Bridge Offline'}
+                </span>
               </div>
-            )}
-          </div>
+
+              <button
+                onClick={() => setShowSimMenu(!showSimMenu)}
+                className="session-btn"
+                style={{ fontSize: 9, padding: '2px 6px' }}
+              >
+                {showSimMenu ? 'Hide' : 'Test AI'}
+              </button>
+
+              {showSimMenu && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    gap: 4,
+                    backgroundColor: 'var(--session-surface)',
+                    padding: '2px 6px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--session-border)',
+                  }}
+                >
+                  <button
+                    onClick={handleSimulateAiStart}
+                    className="session-btn"
+                    style={{ fontSize: 9, padding: '2px 6px' }}
+                  >
+                    Start
+                  </button>
+                  <button
+                    onClick={handleSimulateAiWaiting}
+                    className="session-btn"
+                    style={{ fontSize: 9, padding: '2px 6px' }}
+                  >
+                    Approval
+                  </button>
+                  <button
+                    onClick={handleSimulateAiDone}
+                    className="session-btn"
+                    style={{ fontSize: 9, padding: '2px 6px' }}
+                  >
+                    Done
+                  </button>
+                  <button
+                    onClick={handleSimulateVision}
+                    className="session-btn"
+                    style={{ fontSize: 9, padding: '2px 6px' }}
+                  >
+                    Vision
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </>
-      ) : (
+      )}
+
+      {viewMode === 'FOCUS' && (
+        <FocusView
+          activeTask={activeTask}
+          focusSeconds={focusSeconds}
+          targetMinutes={targetMinutes}
+          isTimerRunning={isTimerRunning}
+          viewMode={viewMode}
+          onToggleTimer={toggleTimer}
+          onAdjustMinutes={adjustTargetMinutes}
+          onCompleteActiveTask={completeActiveTask}
+          onSelectViewMode={setViewMode}
+          onOpenIde={handleOpenIde}
+        />
+      )}
+
+      {viewMode === 'DOCK' && (
         <CollapsedPill
           activeTask={activeTask}
           aiRun={aiRun}

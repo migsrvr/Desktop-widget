@@ -21,6 +21,11 @@ import {
   validateOperatorAction,
   canApproveAction,
   mapVisionToAiStatus,
+  ViewMode,
+  TaskDisplayState,
+  formatTaskNumber,
+  formatCountdown,
+  mapTaskToDisplayState,
 } from './events';
 
 describe('Domain Models & Invariants', () => {
@@ -272,4 +277,38 @@ describe('Domain Models & Invariants', () => {
     };
     expect(JSON.parse(JSON.stringify(proposal)).type).toBe('agent/action_proposed');
   });
+
+  describe('SESSION Redesign Display & View State Helpers', () => {
+    it('formats 1-indexed two-digit airport board task numbers', () => {
+      expect(formatTaskNumber(0)).toBe('01');
+      expect(formatTaskNumber(1)).toBe('02');
+      expect(formatTaskNumber(9)).toBe('10');
+      expect(formatTaskNumber(99)).toBe('100');
+    });
+
+    it('formats countdown seconds into mm:ss display values', () => {
+      expect(formatCountdown(1478)).toBe('24:38');
+      expect(formatCountdown(65)).toBe('01:05');
+      expect(formatCountdown(0)).toBe('00:00');
+      expect(formatCountdown(-10)).toBe('00:00');
+    });
+
+    it('maps task and timer state to explicit airport status badge', () => {
+      const activeTask: Task = {
+        id: 't-1',
+        dayPlanDate: '2026-10-07',
+        title: 'Task 1',
+        status: 'NOW',
+        displayOrder: 0,
+        elapsedFocusSeconds: 0,
+        createdAt: new Date().toISOString(),
+      };
+
+      expect(mapTaskToDisplayState(null, false)).toBe('READY');
+      expect(mapTaskToDisplayState(activeTask, true)).toBe('IN_FOCUS');
+      expect(mapTaskToDisplayState(activeTask, false)).toBe('PAUSED');
+      expect(mapTaskToDisplayState({ ...activeTask, status: 'DONE' }, false)).toBe('COMPLETED');
+    });
+  });
 });
+

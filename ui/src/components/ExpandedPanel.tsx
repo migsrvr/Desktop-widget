@@ -1,9 +1,21 @@
 import React, { useState } from 'react';
-import { Task, TaskStatus, AiRun, TimelineEvent, SpotifyTrack, SpotifyPlaybackAction, ScreenMode, ScreenFrameMeta, VisionInference, OperatorActionProposal } from '@workpulse/shared';
-import { AiRunCard } from './AiRunCard';
+import {
+  Task,
+  TaskStatus,
+  AiRun,
+  TimelineEvent,
+  SpotifyTrack,
+  SpotifyPlaybackAction,
+  ScreenMode,
+  ScreenFrameMeta,
+  VisionInference,
+  OperatorActionProposal,
+  ViewMode,
+} from '@workpulse/shared';
 import { TaskList } from './TaskList';
-import { FocusTimer } from './FocusTimer';
-import { TimelineView } from './TimelineView';
+import { CurrentSessionBanner } from './CurrentSessionBanner';
+import { StudioConsole } from './StudioConsole';
+import { TransportBar } from './TransportBar';
 import { SpotifyPlayerCard } from './SpotifyPlayerCard';
 import { OperatorCard } from './OperatorCard';
 
@@ -21,6 +33,7 @@ interface ExpandedPanelProps {
   isTimerRunning: boolean;
   focusSeconds: number;
   targetMinutes: number;
+  viewMode?: ViewMode;
   onCollapse: () => void;
   onDockTopRight?: () => void;
   isDocked?: boolean;
@@ -35,6 +48,8 @@ interface ExpandedPanelProps {
   onDeleteTask: (id: string) => void;
   onAddTask: (title: string, status: TaskStatus) => void;
   onClearPastTasks?: () => void;
+  onCompleteActiveTask?: () => void;
+  onSelectViewMode?: (mode: ViewMode) => void;
   onOpenIde?: () => void;
   isBridgeConnected?: boolean;
   sidePanel?: 'spotify' | 'operator' | null;
@@ -66,30 +81,28 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   aiRun,
   timeline,
   completionPercentage,
-  doneCount: propDoneCount,
-  remainingCount: propRemainingCount,
   isAlwaysOnTop,
   isMuted,
   isTimerRunning,
   focusSeconds,
   targetMinutes,
+  viewMode = 'BOARD',
   onCollapse,
   onDockTopRight,
-  isDocked = false,
+  onMinimizeToTaskbar,
   onToggleAlwaysOnTop,
   onToggleMute,
   onToggleTimer,
-  onResetTimer,
   onAdjustMinutes,
   onSelectActiveTask,
   onUpdateTaskStatus,
   onDeleteTask,
   onAddTask,
   onClearPastTasks,
+  onCompleteActiveTask = () => {},
+  onSelectViewMode = () => {},
   onOpenIde,
-  isBridgeConnected = false,
   sidePanel = null,
-  onToggleSidePanel,
   onCloseSidePanel,
   spotifyTrack,
   isSpotifyConnected,
@@ -109,37 +122,20 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   onOperatorApprove,
   onOperatorDeny,
 }) => {
-  const [activeTab, setActiveTab] = useState<'tasks' | 'timeline'>('tasks');
-  const [currentTime, setCurrentTime] = React.useState(new Date());
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   React.useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const fullDateStr = currentTime.toLocaleDateString([], {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
+  // Format real-time clock: HH:MM:SS
+  const timeStr = currentTime.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
   });
-  const timeStr = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-  const doneCount =
-    typeof propDoneCount === 'number'
-      ? propDoneCount
-      : tasks.filter((t) => t.status === 'DONE').length;
-  const remainingCount =
-    typeof propRemainingCount === 'number' ? propRemainingCount : tasks.length - doneCount;
-
-  const showOperator = !!onToggleOperatorWatching && !!operatorMode;
-  const spotifyStatus = !isSpotifyConnected
-    ? 'Connect music'
-    : spotifyTrack
-      ? `${spotifyTrack.isPlaying ? 'Playing' : 'Paused'} · ${spotifyTrack.name}`
-      : 'Ready to play';
-  const operatorModeLabel =
-    operatorMode === 'MONITOR' ? 'Monitor' : operatorMode === 'OPERATOR' ? 'Operator' : operatorMode === 'ON_DEMAND' ? 'On-demand' : 'Paused';
-  const operatorStatus = operatorWatching ? `Watching · ${operatorModeLabel}` : operatorModeLabel;
 
   return (
     <div
@@ -152,31 +148,34 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
         boxSizing: 'border-box',
       }}
     >
-      {/* Left flyout — Spotify / Screen Operator extend width, not length */}
+      {/* Optional Left Flyout for detailed Spotify setup or Screen Operator camera feed */}
       {sidePanel && (
         <div
-          className="w11-acrylic-panel"
+          className="session-panel-card"
           style={{
             width: 300,
             flexShrink: 0,
-            padding: '14px',
+            padding: '12px',
             display: 'flex',
             flexDirection: 'column',
             gap: 10,
             boxSizing: 'border-box',
-            maxHeight: 600,
+            maxHeight: 620,
             overflowY: 'auto',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.2px', color: '#ffffff' }}>
-              {sidePanel === 'spotify' ? 'Spotify' : 'Screen Operator'}
+            <span
+              className="session-mono"
+              style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: '#FFFFFF' }}
+            >
+              {sidePanel === 'spotify' ? 'SPOTIFY SETUP' : 'SCREEN OPERATOR INSPECTION'}
             </span>
             <button
               onClick={onCloseSidePanel}
-              className="apple-btn-text"
-              style={{ padding: '2px 7px', fontSize: 11 }}
-              title="Close panel"
+              className="session-btn"
+              style={{ padding: '1px 5px', fontSize: 10 }}
+              title="Close flyout"
             >
               ✕
             </button>
@@ -211,315 +210,202 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
         </div>
       )}
 
+      {/* Main Board Console */}
       <div
-        className="w11-acrylic-panel"
+        className="session-window-frame"
         style={{
           width: '100%',
-          maxWidth: 400,
-          padding: '16px',
+          maxWidth: 420,
+          padding: '14px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 14,
+          gap: 10,
           boxSizing: 'border-box',
         }}
       >
-      {/* Title Header with Monotone Window Controls (drag to move, double-click to dock top-right) */}
-      <div
-        data-tauri-drag-region
-        className="titlebar-drag-region"
-        onDoubleClick={onDockTopRight}
-        title="Drag to move · Double-click to dock top-right"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          cursor: 'grab',
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flexShrink: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: '-0.3px', color: '#ffffff' }}>
-              WorkPulse
+        {/* Title Bar with Drag Region */}
+        <div
+          data-tauri-drag-region
+          className="titlebar-drag-region"
+          onDoubleClick={onDockTopRight}
+          title="Drag to move · Double-click to dock top-right"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: 'grab',
+            userSelect: 'none',
+          }}
+        >
+          {/* SESSION / CONTROL BOARD Branding */}
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span
+              data-tauri-drag-region
+              className="session-display"
+              style={{
+                fontSize: 15,
+                fontWeight: 700,
+                letterSpacing: '0.06em',
+                color: '#FFFFFF',
+                lineHeight: 1.1,
+              }}
+            >
+              SESSION
             </span>
             <span
+              data-tauri-drag-region
+              className="session-mono"
+              style={{
+                fontSize: 10,
+                color: 'var(--session-text-secondary)',
+                letterSpacing: '0.05em',
+                marginTop: 2,
+              }}
+            >
+              CONTROL BOARD
+            </span>
+          </div>
+
+          {/* Clock & Hardware Window Controls */}
+          <div
+            className="non-drag"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            {/* Real-Time Clock: 17:35:19 */}
+            <span
+              className="session-mono"
               style={{
                 fontSize: 11,
-                fontFamily: 'JetBrains Mono, monospace',
-                color: 'var(--text-tertiary)',
-                whiteSpace: 'nowrap',
+                fontWeight: 600,
+                color: 'var(--session-text-secondary)',
+                letterSpacing: '0.05em',
               }}
             >
               {timeStr}
             </span>
+
+            {/* Hardware-Style Window Buttons: PIN, −, □, × */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <button
+                onClick={onToggleAlwaysOnTop}
+                className={`session-btn ${isAlwaysOnTop ? 'active' : ''}`}
+                style={{ padding: '2px 6px', fontSize: 9 }}
+                title={isAlwaysOnTop ? 'Pinned always on top' : 'Pin always on top'}
+              >
+                PIN
+              </button>
+
+              <button
+                onClick={onToggleMute}
+                className={`session-btn ${isMuted ? 'active' : ''}`}
+                style={{ padding: '2px 5px', fontSize: 9 }}
+                title={isMuted ? 'Sound muted' : 'Sound active'}
+              >
+                {isMuted ? 'MUTED' : 'SND'}
+              </button>
+
+              {onMinimizeToTaskbar && (
+                <button
+                  onClick={onMinimizeToTaskbar}
+                  className="session-btn"
+                  style={{ padding: '2px 5px', fontSize: 9 }}
+                  title="Minimize window"
+                >
+                  −
+                </button>
+              )}
+
+              <button
+                onClick={() => onSelectViewMode('FOCUS')}
+                className="session-btn"
+                style={{ padding: '2px 5px', fontSize: 9 }}
+                title="Switch to Focus mode"
+              >
+                □
+              </button>
+
+              <button
+                onClick={onCollapse}
+                className="session-btn"
+                style={{ padding: '2px 5px', fontSize: 9 }}
+                title="Collapse to Dock mode"
+              >
+                ×
+              </button>
+            </div>
           </div>
-          <span
-            style={{
-              fontSize: 11,
-              color: 'var(--text-secondary)',
-              marginTop: 1,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {fullDateStr}
-          </span>
         </div>
 
-        {/* Monotone Header Action Buttons (No bulky multi-color icons) */}
-        <div className="non-drag" style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-          <button
-            onClick={onToggleMute}
-            className={`apple-btn-text ${isMuted ? '' : 'active'}`}
-            title={isMuted ? 'Unmute' : 'Mute'}
-          >
-            {isMuted ? 'Muted' : 'Sound'}
-          </button>
-          {onDockTopRight && (
-            <button
-              onClick={onDockTopRight}
-              className={`apple-btn-text ${isDocked ? 'active' : ''}`}
-              title={isDocked ? 'Docked top-right' : 'Dock to top-right corner'}
-            >
-              Dock
-            </button>
-          )}
-          <button
-            onClick={onToggleAlwaysOnTop}
-            className={`apple-btn-text ${isAlwaysOnTop ? 'active' : ''}`}
-            title="Always on Top"
-          >
-            Pin
-          </button>
-          <button
-            onClick={onCollapse}
-            className="apple-btn-text"
-            style={{ padding: '3px 7px', fontSize: 12 }}
-            title="Collapse to compact pill"
-          >
-            −
-          </button>
-        </div>
-      </div>
+        {/* Hairline Divider */}
+        <div className="session-divider" />
 
-      {/* Workload Section */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.2px', color: '#ffffff' }}>
-            Today’s Workload
-          </span>
-          <span
-            style={{
-              fontSize: 13,
-              fontWeight: 700,
-              color: '#ffffff',
-              fontFamily: 'JetBrains Mono, SF Mono, monospace',
-              fontVariantNumeric: 'tabular-nums',
-            }}
-          >
-            {completionPercentage}%
-          </span>
-        </div>
-        <div
-          style={{
-            height: 6,
-            borderRadius: 'var(--radius-pill)',
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              height: '100%',
-              width: `${completionPercentage}%`,
-              background: '#ffffff',
-              borderRadius: 'var(--radius-pill)',
-              transition: 'width 0.35s ease',
-            }}
-          />
-        </div>
-      </div>
-
-      {/* AI Companion Card */}
-      <AiRunCard aiRun={aiRun} timeline={timeline} />
-
-      {/* Side flyout launchers — full cards live in the left flyout */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        {showOperator && (
-          <button
-            onClick={() => onToggleSidePanel?.('operator')}
-            aria-expanded={sidePanel === 'operator'}
-            className="w11-card"
-            style={{
-              flex: 1,
-              minWidth: 0,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '8px 10px',
-              cursor: 'pointer',
-              textAlign: 'left',
-              borderColor: sidePanel === 'operator' ? 'rgba(255, 255, 255, 0.22)' : undefined,
-              backgroundColor: sidePanel === 'operator' ? 'rgba(255, 255, 255, 0.08)' : undefined,
-            }}
-            title="Open Screen Operator panel"
-          >
-            <span
-              style={{
-                width: 7,
-                height: 7,
-                borderRadius: '50%',
-                backgroundColor: '#ffffff',
-                opacity: operatorWatching ? 1 : 0.4,
-                flexShrink: 0,
-                display: 'inline-block',
-              }}
-            />
-            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#ffffff' }}>Screen Operator</span>
-              <span
-                style={{
-                  fontSize: 10,
-                  color: 'var(--text-tertiary)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {operatorStatus}
-              </span>
-            </span>
-            <span style={{ fontSize: 12, color: 'var(--text-tertiary)', flexShrink: 0 }}>‹</span>
-          </button>
-        )}
-
-        {onOpenSpotifySetup && onSpotifyControl && (
-          <button
-            onClick={() => onToggleSidePanel?.('spotify')}
-            aria-expanded={sidePanel === 'spotify'}
-            className="w11-card"
-            style={{
-              flex: 1,
-              minWidth: 0,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '8px 10px',
-              cursor: 'pointer',
-              textAlign: 'left',
-              borderColor: sidePanel === 'spotify' ? 'rgba(255, 255, 255, 0.22)' : undefined,
-              backgroundColor: sidePanel === 'spotify' ? 'rgba(255, 255, 255, 0.08)' : undefined,
-            }}
-            title="Open Spotify panel"
-          >
-            <span style={{ fontSize: 13, color: '#ffffff', flexShrink: 0 }}>♫</span>
-            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#ffffff' }}>Spotify</span>
-              <span
-                style={{
-                  fontSize: 10,
-                  color: 'var(--text-tertiary)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {spotifyStatus}
-              </span>
-            </span>
-            <span style={{ fontSize: 12, color: 'var(--text-tertiary)', flexShrink: 0 }}>‹</span>
-          </button>
-        )}
-      </div>
-
-      {/* Workload & Focus Panel */}
-      <div
-        className="w11-card"
-        style={{
-          padding: '12px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-        }}
-      >
-        {/* Monotone Typographic Segmented Control (No icons) */}
-        <div className="apple-segmented-container">
-          <button
-            onClick={() => setActiveTab('tasks')}
-            className={`apple-segmented-item ${activeTab === 'tasks' ? 'active' : ''}`}
-          >
-            Tasks ({tasks.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('timeline')}
-            className={`apple-segmented-item ${activeTab === 'timeline' ? 'active' : ''}`}
-          >
-            Timeline ({timeline.length})
-          </button>
-        </div>
-
-        {/* Tab Body */}
-        {activeTab === 'tasks' ? (
-          <TaskList
-            tasks={tasks}
-            pastCompletedTasks={pastCompletedTasks}
-            onSelectActive={onSelectActiveTask}
-            onUpdateStatus={onUpdateTaskStatus}
-            onDeleteTask={onDeleteTask}
-            onAddTask={onAddTask}
-            onClearPastTasks={onClearPastTasks}
-          />
-        ) : (
-          <TimelineView timeline={timeline} />
-        )}
-
-        {/* Focus Timer Stepper & Primary Action */}
-        <FocusTimer
-          seconds={focusSeconds}
-          isRunning={isTimerRunning}
+        {/* Current Session Banner */}
+        <CurrentSessionBanner
+          activeTask={activeTask}
+          focusSeconds={focusSeconds}
           targetMinutes={targetMinutes}
-          onToggle={onToggleTimer}
-          onReset={onResetTimer}
-          onAdjustMinutes={onAdjustMinutes}
+          isTimerRunning={isTimerRunning}
+          completionPercentage={completionPercentage}
         />
-      </div>
 
-      {/* Footer Bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingTop: 2,
-          paddingLeft: 2,
-          paddingRight: 2,
-        }}
-      >
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-tertiary)' }}>
-          <span
-            style={{
-              width: 5,
-              height: 5,
-              borderRadius: '50%',
-              backgroundColor: isBridgeConnected ? '#ffffff' : 'rgba(255, 255, 255, 0.3)',
-              display: 'inline-block',
-            }}
-            title={isBridgeConnected ? 'IDE bridge online' : 'IDE bridge offline'}
-          />
-          {doneCount} done · {remainingCount} remaining
-        </span>
+        {/* Hairline Divider */}
+        <div className="session-divider" />
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <button
-            onClick={onOpenIde}
-            className="apple-btn-text"
-            style={{ color: '#ffffff' }}
-            title="Open in IDE"
-          >
-            Open IDE
-          </button>
-        </div>
-      </div>
+        {/* Airport Task Departure Board */}
+        <TaskList
+          tasks={tasks}
+          pastCompletedTasks={pastCompletedTasks}
+          onSelectActive={onSelectActiveTask}
+          onUpdateStatus={onUpdateTaskStatus}
+          onDeleteTask={onDeleteTask}
+          onAddTask={onAddTask}
+          onClearPastTasks={onClearPastTasks}
+        />
+
+        {/* Hairline Divider */}
+        <div className="session-divider" />
+
+        {/* Studio Console (3-Channel Rack) */}
+        <StudioConsole
+          aiRun={aiRun}
+          timeline={timeline}
+          operatorWatching={operatorWatching}
+          operatorMode={operatorMode}
+          operatorFrame={operatorFrame}
+          operatorInference={operatorInference}
+          operatorProposal={operatorProposal}
+          operatorThumbUrl={operatorThumbUrl}
+          onToggleOperatorWatching={onToggleOperatorWatching}
+          onOperatorCapture={onOperatorCapture}
+          onOperatorApprove={onOperatorApprove}
+          onOperatorDeny={onOperatorDeny}
+          spotifyTrack={spotifyTrack}
+          isSpotifyConnected={isSpotifyConnected}
+          isSpotifyConnecting={isSpotifyConnecting}
+          onOpenSpotifySetup={onOpenSpotifySetup}
+          onSpotifyControl={onSpotifyControl}
+          onDetectSpotifyLocal={onDetectSpotifyLocal}
+        />
+
+        {/* Hairline Divider */}
+        <div className="session-divider" />
+
+        {/* Transport Controls Bar */}
+        <TransportBar
+          isTimerRunning={isTimerRunning}
+          targetMinutes={targetMinutes}
+          viewMode={viewMode}
+          onToggleTimer={onToggleTimer}
+          onAdjustMinutes={onAdjustMinutes}
+          onCompleteActiveTask={onCompleteActiveTask}
+          onSelectViewMode={onSelectViewMode}
+          onOpenIde={onOpenIde}
+          hasActiveTask={!!activeTask}
+        />
       </div>
     </div>
   );

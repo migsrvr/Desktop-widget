@@ -12,6 +12,7 @@ import {
   calculateCompletionPercentage,
   filterTodaysTasks,
   filterPastCompletedTasks,
+  ViewMode,
 } from '@workpulse/shared';
 import { haptics } from '../audio/haptics';
 import { useSpotifyPlayer } from './useSpotifyPlayer';
@@ -66,7 +67,15 @@ export function useWorkpulseState() {
   const [aiRun, setAiRun] = useState<AiRun | null>(INITIAL_AI_RUN);
   const [timeline, setTimeline] = useState<TimelineEvent[]>(INITIAL_TIMELINE);
 
-  const [isExpanded, setIsExpanded] = useState<boolean>(true);
+  const [viewMode, setViewModeState] = useState<ViewMode>(() => {
+    try {
+      const saved = localStorage.getItem('session_view_mode_v1');
+      if (saved === 'BOARD' || saved === 'FOCUS' || saved === 'DOCK') return saved as ViewMode;
+    } catch {}
+    return 'BOARD';
+  });
+
+  const isExpanded = viewMode !== 'DOCK';
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState<boolean>(true);
   const [isMuted, setIsMuted] = useState<boolean>(false);
 
@@ -310,10 +319,15 @@ export function useWorkpulseState() {
     (async () => {
       try {
         const win = getCurrentWindow();
-        if (!isExpanded) {
+        if (viewMode === 'DOCK') {
           await win.setSize(new LogicalSize(345, 48));
           return;
         }
+        if (viewMode === 'FOCUS') {
+          await win.setSize(new LogicalSize(420, 260));
+          return;
+        }
+        // BOARD mode:
         // Shift horizontally only on open/close transitions so the
         // main column doesn't jump when switching between flyouts.
         if (isOpen && !wasOpen) {
@@ -327,22 +341,39 @@ export function useWorkpulseState() {
         }
         await win.setSize(new LogicalSize(isOpen ? MAIN_W + SIDE_GAP + SIDE_W : MAIN_W, 640));
       } catch {
-        // Fallback to the native command if the window API is unavailable.
-        invoke(
-          'set_widget_size',
-          isExpanded ? { width: 420, height: 640 } : { width: 345, height: 48 }
-        ).catch(() => {});
+        const targetH = viewMode === 'DOCK' ? 48 : viewMode === 'FOCUS' ? 260 : 640;
+        const targetW = viewMode === 'DOCK' ? 345 : 420;
+        invoke('set_widget_size', { width: targetW, height: targetH }).catch(() => {});
       }
     })();
-  }, [isExpanded, sidePanel]);
+  }, [viewMode, isExpanded, sidePanel]);
+
+  const setViewMode = useCallback((mode: ViewMode) => {
+    haptics.snapClick();
+    if (mode === 'DOCK' || mode === 'FOCUS') setSidePanel(null);
+    setViewModeState(mode);
+    try {
+      localStorage.setItem('session_view_mode_v1', mode);
+    } catch {}
+  }, []);
 
   const toggleExpanded = useCallback(() => {
     haptics.snapClick();
-    setIsExpanded((prev) => {
-      if (prev) setSidePanel(null);
-      return !prev;
+    setViewModeState((prev) => {
+      const next = prev === 'DOCK' ? 'BOARD' : 'DOCK';
+      if (next === 'DOCK') setSidePanel(null);
+      try {
+        localStorage.setItem('session_view_mode_v1', next);
+      } catch {}
+      return next;
     });
   }, []);
+
+  const completeActiveTask = useCallback(() => {
+    if (activeTask) {
+      updateTaskStatus(activeTask.id, 'DONE');
+    }
+  }, [activeTask, updateTaskStatus]);
 
   const toggleAlwaysOnTop = useCallback(() => {
     setIsAlwaysOnTop((prev) => {
@@ -710,6 +741,9 @@ export function useWorkpulseState() {
     deleteTask,
     clearPastCompletedTasks,
     clearAllCompletedTasks,
+    completeActiveTask,
+    viewMode,
+    setViewMode,
     sidePanel,
     toggleSidePanel,
     closeSidePanel,

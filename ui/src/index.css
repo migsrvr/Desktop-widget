@@ -1,35 +1,48 @@
+@import '@fontsource/silkscreen/400.css';
+@import '@fontsource/silkscreen/700.css';
+
 :root {
-  /* Luxury Monotone Windows 11 & Apple Design Tokens */
-  --mono-bg-acrylic: rgba(18, 18, 20, 0.88);
-  --mono-card: rgba(28, 28, 32, 0.65);
-  --mono-card-hover: rgba(38, 38, 44, 0.78);
-  --mono-subcard: rgba(14, 14, 16, 0.50);
+  /* SESSION Strict Monochrome Palette */
+  --session-bg: #121212;
+  --session-surface: #202020;
+  --session-surface-active: #2A2A2A;
+  --session-text-primary: #E7E7E7;
+  --session-text-secondary: #AAAAAA;
+  --session-border: #424242;
+  --session-accent-white: #FFFFFF;
 
-  --mono-border: rgba(255, 255, 255, 0.08);
-  --mono-border-subtle: rgba(255, 255, 255, 0.05);
-  --mono-border-highlight: rgba(255, 255, 255, 0.16);
-  --mono-border-card: rgba(255, 255, 255, 0.07);
+  /* Typography Roles */
+  --font-display: 'Silkscreen', monospace;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Segoe UI Mono', 'Roboto Mono', 'Menlo', 'Consolas', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 
-  /* Monotone Typography */
-  --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.70);
-  --text-tertiary: rgba(255, 255, 255, 0.40);
-  --text-disabled: rgba(255, 255, 255, 0.25);
+  /* Compatibility & Inset Aliases */
+  --mono-bg-acrylic: #121212;
+  --mono-card: #202020;
+  --mono-card-hover: #2A2A2A;
+  --mono-subcard: #181818;
+  --mono-border: #424242;
+  --mono-border-subtle: #2D2D2D;
+  --mono-border-highlight: #666666;
+  --mono-border-card: #424242;
 
-  /* Monotone Radii */
-  --radius-xs: 5px;
-  --radius-sm: 8px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  --text-primary: #E7E7E7;
+  --text-secondary: #AAAAAA;
+  --text-tertiary: #777777;
+  --text-disabled: #444444;
+
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
   --radius-pill: 9999px;
 
   /* Shadows */
   --shadow-flyout: 
-    0 24px 48px -12px rgba(0, 0, 0, 0.75),
-    0 0 0 1px var(--mono-border),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.10);
+    0 24px 48px -12px rgba(0, 0, 0, 0.9),
+    0 0 0 1px var(--session-border);
 
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
   color-scheme: dark;
 }
 
@@ -105,6 +118,101 @@ input:focus-visible {
 
 .w11-card:hover {
   border-color: var(--mono-border-highlight);
+}
+
+/* -------------------------------------------------------------------------
+   SESSION Design Classes
+   ------------------------------------------------------------------------- */
+.session-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
+}
+
+.session-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.session-sans {
+  font-family: var(--font-sans);
+}
+
+.session-window-frame {
+  background: var(--session-bg);
+  border: 1px solid var(--session-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.85);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.session-panel-card {
+  background: var(--session-surface);
+  border: 1px solid var(--session-border);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+}
+
+.session-divider {
+  border-bottom: 1px solid var(--session-border);
+  width: 100%;
+}
+
+.session-btn {
+  background: var(--session-surface);
+  border: 1px solid var(--session-border);
+  color: var(--session-text-primary);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.session-btn:hover {
+  background: var(--session-surface-active);
+  border-color: #666666;
+  color: #FFFFFF;
+}
+
+.session-btn.active {
+  background: var(--session-surface-active);
+  border-color: var(--session-accent-white);
+  color: #FFFFFF;
+}
+
+.session-btn-primary {
+  background: #E7E7E7;
+  color: #121212;
+  border: 1px solid #FFFFFF;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity 0.12s ease, transform 0.1s ease;
+}
+
+.session-btn-primary:hover {
+  opacity: 0.92;
+}
+
+.session-btn-primary:active {
+  transform: scale(0.97);
+}
+
+.session-active-marker {
+  width: 3px;
+  background-color: var(--session-accent-white);
+  border-radius: 1px;
+  flex-shrink: 0;
 }
 
 /* Window Drag Regions */

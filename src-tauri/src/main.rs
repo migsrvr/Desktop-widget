@@ -359,7 +359,7 @@ fn main() {
         ])
         .setup(|app| {
             // Build Windows System Tray
-            let show_i = MenuItem::with_id(app, "show", "Show / Hide WorkPulse", true, None::<&str>)?;
+            let show_i = MenuItem::with_id(app, "show", "Show / Hide SESSION", true, None::<&str>)?;
             let pin_i = MenuItem::with_id(app, "pin", "Always on Top", true, None::<&str>)?;
             let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_i, &pin_i, &quit_i])?;

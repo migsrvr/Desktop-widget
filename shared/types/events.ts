@@ -467,3 +467,41 @@ export function mapVisionToAiStatus(state: VisionState): AiRunStatus {
       return 'WORKING';
   }
 }
+
+// ---------------------------------------------------------------------------
+// SESSION Redesign Types & Display Helpers
+// ---------------------------------------------------------------------------
+
+export type ViewMode = 'BOARD' | 'FOCUS' | 'DOCK';
+
+export type TaskDisplayState = 'READY' | 'IN_FOCUS' | 'PAUSED' | 'COMPLETED';
+
+/**
+ * Formats a 0-indexed number into a 1-indexed two-digit airport board string.
+ * Example: 0 -> "01", 1 -> "02", 9 -> "10".
+ */
+export function formatTaskNumber(index: number): string {
+  const num = Math.max(1, index + 1);
+  return num < 10 ? `0${num}` : `${num}`;
+}
+
+/**
+ * Formats seconds into mm:ss for the airport departure / studio countdown display.
+ * Negative or invalid values safely format as "00:00".
+ */
+export function formatCountdown(totalSeconds: number): string {
+  const safe = Math.max(0, Math.floor(totalSeconds));
+  const mins = Math.floor(safe / 60);
+  const secs = safe % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Maps the current active task and focus timer status to an explicit display state.
+ */
+export function mapTaskToDisplayState(task: Task | null, isTimerRunning: boolean): TaskDisplayState {
+  if (!task) return 'READY';
+  if (task.status === 'DONE') return 'COMPLETED';
+  return isTimerRunning ? 'IN_FOCUS' : 'PAUSED';
+}
+
