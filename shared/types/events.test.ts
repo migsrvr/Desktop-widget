@@ -26,9 +26,54 @@ import {
   formatTaskNumber,
   formatCountdown,
   mapTaskToDisplayState,
+  groupPastCompletedTasksByDate,
+  formatPastDateLabel,
+  formatPomodoroDuration,
 } from './events';
 
 describe('Domain Models & Invariants', () => {
+  describe('task history and Pomodoro display', () => {
+    const completedTask = (id: string, dayPlanDate: string, completedAt?: string): Task => ({
+      id, dayPlanDate, completedAt, title: id, status: 'DONE',
+      displayOrder: 0, elapsedFocusSeconds: 0, createdAt: '',
+    });
+
+    it('groups by completion date, falls back to plan date, and sorts newest first', () => {
+      const tasks = [
+        completedTask('older', '2026-10-05', '2026-10-05T09:00:00Z'),
+        completedTask('yesterday', '2026-10-01', '2026-10-09T12:00:00Z'),
+        completedTask('fallback', '2026-10-08'),
+        completedTask('same-day', '2026-10-09', '2026-10-09T13:00:00Z'),
+      ];
+      const groups = groupPastCompletedTasksByDate(tasks, '2026-10-10');
+      expect(groups.map((group) => group.date)).toEqual(['2026-10-09', '2026-10-08', '2026-10-05']);
+      expect(groups[0].tasks.map((task) => task.id)).toEqual(['yesterday', 'same-day']);
+      expect(groups[0].formattedLabel).toBe('Yesterday · Oct 9, 2026');
+      expect(groups[1].tasks[0].id).toBe('fallback');
+      expect(tasks.map((task) => task.id)).toEqual(['older', 'yesterday', 'fallback', 'same-day']);
+      expect(groupPastCompletedTasksByDate([], '2026-10-10')).toEqual([]);
+    });
+
+    it('labels yesterday across month and year boundaries, and labels older dates', () => {
+      expect(formatPastDateLabel('2026-10-09', '2026-10-10')).toBe('Yesterday · Oct 9, 2026');
+      expect(formatPastDateLabel('2026-09-30', '2026-10-01')).toBe('Yesterday · Sep 30, 2026');
+      expect(formatPastDateLabel('2025-12-31', '2026-01-01')).toBe('Yesterday · Dec 31, 2025');
+      expect(formatPastDateLabel('2026-10-08', '2026-10-10')).toBe('Thu, Oct 8, 2026');
+      expect(formatPastDateLabel('Earlier', '2026-10-10')).toBe('Earlier');
+    });
+
+    it('formats configured, elapsed, completed, and untimed task durations', () => {
+      expect(formatPomodoroDuration(0, 25)).toBe('25m');
+      expect(formatPomodoroDuration(260, 25)).toBe('04:20 / 25m');
+      expect(formatPomodoroDuration(1500, 25)).toBe('25:00 / 25m');
+      expect(formatPomodoroDuration(1)).toBe('00:01');
+      expect(formatPomodoroDuration(65.9)).toBe('01:05');
+      expect(formatPomodoroDuration(0)).toBe('--');
+      expect(formatPomodoroDuration(-5, 15)).toBe('15m');
+      expect(formatPomodoroDuration(65, 0)).toBe('01:05');
+    });
+  });
+
   it('validates single active NOW task invariant', () => {
     const validTasks: Task[] = [
       {

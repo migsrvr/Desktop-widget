@@ -18,9 +18,12 @@ export const CurrentSessionBanner: React.FC<CurrentSessionBannerProps> = ({
 }) => {
   const displayState: TaskDisplayState = mapTaskToDisplayState(activeTask, isTimerRunning);
 
-  // Focus Countdown: remaining seconds from targetMinutes (or 00:00 when reached)
-  const targetTotalSeconds = targetMinutes * 60;
-  const remainingSeconds = Math.max(0, targetTotalSeconds - focusSeconds);
+  // Prefer the active task’s Pomodoro; otherwise use the session timer.
+  const targetTotalSeconds = (activeTask?.estimatedMinutes ?? targetMinutes) * 60;
+  const elapsedSeconds = activeTask?.estimatedMinutes != null
+    ? activeTask.elapsedFocusSeconds
+    : focusSeconds;
+  const remainingSeconds = Math.max(0, targetTotalSeconds - elapsedSeconds);
   const countdownStr = formatCountdown(remainingSeconds);
 
   // Status badge display label

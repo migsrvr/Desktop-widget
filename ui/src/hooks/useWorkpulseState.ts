@@ -32,6 +32,7 @@ import {
 import { haptics } from '../audio/haptics';
 import { markProgrammaticWindowMove } from './useWindowMagnet';
 import { useSpotifyPlayer } from './useSpotifyPlayer';
+import { advanceActiveTaskFocus } from '../utils/taskTimer';
 
 const STORAGE_KEY_TASKS = 'workpulse_tasks_v3';
 const STORAGE_KEY_CONFIG = 'workpulse_config_v1';
@@ -83,15 +84,14 @@ export function useWorkpulseState() {
   // Hydrate tasks directly from native SQLite database on mount
   useEffect(() => {
     let isMounted = true;
+    const tasksAtLoad = tasks;
     async function loadTasksFromDb() {
       if (isTauri()) {
         try {
           const dbTasks = await invoke<Task[]>('get_tasks');
           if (isMounted && Array.isArray(dbTasks) && dbTasks.length > 0) {
-            setTasks(dbTasks);
-            try {
-              localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(dbTasks));
-            } catch {}
+            // A delayed read must not overwrite work created, edited, or timed while loading.
+            setTasks((current) => current === tasksAtLoad ? dbTasks : current);
           }
         } catch (err) {
           console.warn('[WorkPulse] Could not read tasks from SQLite:', err);
@@ -171,7 +171,7 @@ export function useWorkpulseState() {
               ...prevTl,
             ]);
           }
-          return updated;
+          return rolledCount > 0 ? updated : prev;
         });
 
         // Reset daily focus timer for the new day
@@ -183,14 +183,6 @@ export function useWorkpulseState() {
     checkDateRollover();
     const timer = setInterval(checkDateRollover, 10000); // Check every 10s for midnight
     return () => clearInterval(timer);
-  }, []);
-
-  const adjustTargetMinutes = useCallback((delta: number) => {
-    setTargetMinutes((prev) => {
-      const next = Math.max(5, Math.min(180, prev + delta));
-      haptics.snapClick();
-      return next;
-    });
   }, []);
 
   // Save tasks to local storage
@@ -213,6 +205,7 @@ export function useWorkpulseState() {
     if (!isTimerRunning) return;
     const interval = setInterval(() => {
       setFocusSeconds((prev) => prev + 1);
+      setTasks(advanceActiveTaskFocus);
     }, 1000);
     return () => clearInterval(interval);
   }, [isTimerRunning]);
@@ -235,6 +228,34 @@ export function useWorkpulseState() {
     return todaysTasks.find((t) => t.status === 'NOW') || null;
   }, [todaysTasks]);
 
+  useEffect(() => {
+    if (activeTask?.estimatedMinutes) setTargetMinutes(activeTask.estimatedMinutes);
+  }, [activeTask?.id, activeTask?.estimatedMinutes]);
+
+  // Alert outside the state updater so React's development checks cannot play it twice.
+  const breakAlertRef = useRef<string | null>(null);
+  useEffect(() => {
+    const target = (activeTask?.estimatedMinutes || 0) * 60;
+    if (!activeTask || !target || activeTask.elapsedFocusSeconds < target) {
+      breakAlertRef.current = null;
+      return;
+    }
+    if (!isTimerRunning) return;
+    setIsTimerRunning(false);
+    const alertKey = `${activeTask.id}:${target}`;
+    if (breakAlertRef.current === alertKey) return;
+    breakAlertRef.current = alertKey;
+    haptics.agentAlertChime();
+    setTimeline((prev) => [{
+      id: 'evt-break-' + Date.now(),
+      dayPlanDate: activeDate,
+      taskId: activeTask.id,
+      eventType: 'TASK_START',
+      summary: `Pomodoro complete for “${activeTask.title}” · Take a break`,
+      timestamp: new Date().toISOString(),
+    }, ...prev]);
+  }, [activeTask, activeDate, isTimerRunning]);
+
   const completionPercentage = useMemo(() => {
     return calculateCompletionPercentage(todaysTasks);
   }, [todaysTasks]);
@@ -247,23 +268,102 @@ export function useWorkpulseState() {
     return todaysTasks.filter((t) => t.status !== 'DONE').length;
   }, [todaysTasks]);
 
-  const persistTaskToDb = useCallback((task: Task) => {
+  // Serialize writes per task so a delayed timer save cannot undo a reset or deletion.
+  const taskWrites = useRef(new Map<string, Promise<unknown>>());
+  const queueTaskWrite = useCallback((taskId: string, command: string, args: Record<string, unknown>) => {
     if (isTauri()) {
-      invoke('save_task', { task }).catch((err) =>
-        console.error('[WorkPulse] SQLite save_task failed:', err)
-      );
+      const pending = taskWrites.current;
+      const write = (pending.get(taskId) || Promise.resolve())
+        .then(() => invoke(command, args))
+        .catch((err) => console.error(`[WorkPulse] SQLite ${command} failed:`, err));
+      pending.set(taskId, write);
+      void write.then(() => {
+        if (pending.get(taskId) === write) pending.delete(taskId);
+      });
     }
   }, []);
+
+  const pendingTimerTasks = useRef(new Map<string, Task>());
+  const persistTaskToDb = useCallback((task: Task) => {
+    pendingTimerTasks.current.delete(task.id);
+    queueTaskWrite(task.id, 'save_task', { task });
+  }, [queueTaskWrite]);
 
   const removeTaskFromDb = useCallback((taskId: string) => {
-    if (isTauri()) {
-      invoke('remove_task', { taskId }).catch((err) =>
-        console.error('[WorkPulse] SQLite remove_task failed:', err)
-      );
+    pendingTimerTasks.current.delete(taskId);
+    queueTaskWrite(taskId, 'remove_task', { taskId });
+  }, [queueTaskWrite]);
+
+  const previousTimerTasks = useRef(tasks);
+  useEffect(() => {
+    const previous = new Map(previousTimerTasks.current.map((task) => [task.id, task]));
+    const pending = pendingTimerTasks.current;
+    const currentIds = new Set(tasks.map((task) => task.id));
+    for (const id of previous.keys()) {
+      if (!currentIds.has(id)) removeTaskFromDb(id);
     }
+    for (const task of tasks) {
+      const oldTask = previous.get(task.id);
+      const { elapsedFocusSeconds: elapsed, ...fields } = task;
+      const { elapsedFocusSeconds: oldElapsed, ...oldFields } = oldTask || task;
+      if (!oldTask || JSON.stringify(fields) !== JSON.stringify(oldFields) ||
+        (elapsed === 0 && oldElapsed !== 0)) {
+        // Persist creations, edits, status changes, and resets immediately after commit.
+        persistTaskToDb(task);
+      } else if (oldElapsed !== elapsed) {
+        pending.set(task.id, task);
+      }
+      if (pending.has(task.id)) {
+        // Always retain the latest status/target alongside elapsed time.
+        pending.set(task.id, task);
+        if (!isTimerRunning || task.id !== activeTask?.id) persistTaskToDb(task);
+      }
+    }
+    for (const id of pending.keys()) {
+      if (!currentIds.has(id)) pending.delete(id);
+    }
+    previousTimerTasks.current = tasks;
+  }, [tasks, isTimerRunning, activeTask?.id, persistTaskToDb, removeTaskFromDb]);
+
+  useEffect(() => {
+    const flush = () => {
+      for (const task of pendingTimerTasks.current.values()) persistTaskToDb(task);
+    };
+    const interval = setInterval(flush, 5000);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
+  }, [persistTaskToDb]);
+
+  const setTaskPomodoroMinutes = useCallback((taskId: string, minutes: number | undefined) => {
+    if (minutes !== undefined && (!Number.isFinite(minutes) || minutes < 1)) return;
+    setTasks((prev) => prev.map((task) => {
+      if (task.id !== taskId) return task;
+      const updated = { ...task, estimatedMinutes: minutes === undefined ? undefined : Math.round(minutes) };
+      return updated;
+    }));
   }, []);
 
-  const addTask = useCallback((title: string, preferredStatus?: TaskStatus) => {
+  const resetTaskTimer = useCallback((taskId: string) => {
+    setTasks((prev) => prev.map((task) => {
+      if (task.id !== taskId) return task;
+      const updated = { ...task, elapsedFocusSeconds: 0 };
+      return updated;
+    }));
+    haptics.hapticPop(220);
+  }, []);
+
+  const adjustTargetMinutes = useCallback((delta: number) => {
+    const next = Math.max(5, Math.min(180, targetMinutes + delta));
+    setTargetMinutes(next);
+    if (activeTask?.estimatedMinutes) setTaskPomodoroMinutes(activeTask.id, next);
+    haptics.snapClick();
+  }, [targetMinutes, activeTask, setTaskPomodoroMinutes]);
+
+  const addTask = useCallback((title: string, preferredStatus?: TaskStatus, estimatedMinutes?: number) => {
     if (!title.trim()) return;
     const currentToday = getTodayDateStr();
     let assignedStatus: TaskStatus = 'NEXT';
@@ -279,9 +379,9 @@ export function useWorkpulseState() {
         status: assignedStatus,
         displayOrder: prev.length,
         elapsedFocusSeconds: 0,
+        estimatedMinutes,
         createdAt: new Date().toISOString(),
       };
-      persistTaskToDb(newTask);
       return [...prev, newTask];
     });
     haptics.hapticPop(320);
@@ -296,26 +396,24 @@ export function useWorkpulseState() {
       },
       ...prev,
     ]);
-  }, [persistTaskToDb]);
+  }, []);
 
   const setActiveTask = useCallback((taskId: string) => {
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === taskId) {
           const updated = { ...t, status: 'NOW' as const };
-          persistTaskToDb(updated);
           return updated;
         }
         if (t.status === 'NOW') {
           const updated = { ...t, status: 'NEXT' as const };
-          persistTaskToDb(updated);
           return updated;
         }
         return t;
       })
     );
     haptics.snapClick();
-  }, [persistTaskToDb]);
+  }, []);
 
   const updateTaskStatus = useCallback((taskId: string, newStatus: TaskStatus) => {
     setTasks((prev) =>
@@ -323,7 +421,6 @@ export function useWorkpulseState() {
         if (t.id === taskId) {
           const completedAt = newStatus === 'DONE' ? new Date().toISOString() : undefined;
           const updated = { ...t, status: newStatus, completedAt };
-          persistTaskToDb(updated);
           return updated;
         }
         return t;
@@ -346,13 +443,12 @@ export function useWorkpulseState() {
     } else {
       haptics.hapticPop();
     }
-  }, [persistTaskToDb]);
+  }, []);
 
   const deleteTask = useCallback((taskId: string) => {
-    removeTaskFromDb(taskId);
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
     haptics.hapticPop(200);
-  }, [removeTaskFromDb]);
+  }, []);
 
   // Side flyout panel: Activity Log / Screen Operator extend to the LEFT
   // of the main column instead of stacking into one long widget.
@@ -554,14 +650,23 @@ export function useWorkpulseState() {
 
   const toggleTimer = useCallback(() => {
     haptics.snapClick();
+    if (!isTimerRunning && activeTask?.estimatedMinutes &&
+      activeTask.elapsedFocusSeconds >= activeTask.estimatedMinutes * 60) return;
     setIsTimerRunning((prev) => !prev);
-  }, []);
+  }, [isTimerRunning, activeTask]);
 
   const resetTimer = useCallback(() => {
     haptics.hapticPop(220);
     setFocusSeconds(0);
     setIsTimerRunning(false);
-  }, []);
+    if (activeTask) {
+      setTasks((prev) => prev.map((task) => {
+        if (task.id !== activeTask.id) return task;
+        const updated = { ...task, elapsedFocusSeconds: 0 };
+        return updated;
+      }));
+    }
+  }, [activeTask]);
 
   // Process incoming telemetry from IDE extension
   const handleIncomingIdeMessage = useCallback((msg: IdeToWidgetMessage) => {
@@ -848,14 +953,6 @@ export function useWorkpulseState() {
   const clearPastCompletedTasks = useCallback(() => {
     const currentToday = getTodayDateStr();
     setTasks((prev) => {
-      prev.forEach((t) => {
-        if (t.status === 'DONE') {
-          const isToday = t.completedAt ? t.completedAt.startsWith(currentToday) : t.dayPlanDate === currentToday;
-          if (!isToday) {
-            removeTaskFromDb(t.id);
-          }
-        }
-      });
       return prev.filter((t) => {
         if (t.status !== 'DONE') return true;
         if (t.completedAt) return t.completedAt.startsWith(currentToday);
@@ -873,17 +970,17 @@ export function useWorkpulseState() {
       },
       ...prev,
     ]);
-  }, [removeTaskFromDb]);
+  }, []);
 
   const clearAllCompletedTasks = useCallback(() => {
     setTasks((prev) => {
-      prev.filter((t) => t.status === 'DONE').forEach((t) => removeTaskFromDb(t.id));
       return prev.filter((t) => t.status !== 'DONE');
     });
     haptics.snapClick();
-  }, [removeTaskFromDb]);
+  }, []);
 
   return {
+    activeDate,
     tasks,
     todaysTasks,
     pastCompletedTasks,
@@ -918,6 +1015,8 @@ export function useWorkpulseState() {
     toggleMute,
     toggleTimer,
     resetTimer,
+    setTaskPomodoroMinutes,
+    resetTaskTimer,
     handleIncomingIdeMessage,
     spotify,
   };

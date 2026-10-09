@@ -11,6 +11,7 @@ import { SpotifySetupModal } from './components/SpotifySetupModal';
 export const App: React.FC = () => {
   const {
     tasks,
+    activeDate,
     todaysTasks,
     pastCompletedTasks,
     activeTask,
@@ -39,6 +40,8 @@ export const App: React.FC = () => {
     toggleMute,
     toggleTimer,
     resetTimer,
+    setTaskPomodoroMinutes,
+    resetTaskTimer,
     handleIncomingIdeMessage,
     spotify,
     sidePanel,
@@ -161,6 +164,7 @@ export const App: React.FC = () => {
         <>
           <ExpandedPanel
             tasks={todaysTasks}
+            activeDate={activeDate}
             pastCompletedTasks={pastCompletedTasks}
             activeTask={activeTask}
             aiRun={aiRun}
@@ -187,6 +191,8 @@ export const App: React.FC = () => {
             onUpdateTaskStatus={updateTaskStatus}
             onDeleteTask={deleteTask}
             onAddTask={addTask}
+            onSetTaskPomodoro={setTaskPomodoroMinutes}
+            onResetTaskTimer={resetTaskTimer}
             onClearPastTasks={clearPastCompletedTasks}
             onCompleteActiveTask={completeActiveTask}
             onSelectViewMode={setViewMode}
@@ -313,6 +319,7 @@ export const App: React.FC = () => {
           isTimerRunning={isTimerRunning}
           viewMode={viewMode}
           onToggleTimer={toggleTimer}
+          onResetTimer={resetTimer}
           onAdjustMinutes={adjustTargetMinutes}
           onCompleteActiveTask={completeActiveTask}
           onSelectViewMode={setViewMode}

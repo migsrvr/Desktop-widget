@@ -10,6 +10,7 @@ interface FocusViewProps {
   isTimerRunning: boolean;
   viewMode: ViewMode;
   onToggleTimer: () => void;
+  onResetTimer?: () => void;
   onAdjustMinutes: (delta: number) => void;
   onCompleteActiveTask: () => void;
   onSelectViewMode: (mode: ViewMode) => void;
@@ -25,6 +26,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
   isTimerRunning,
   viewMode,
   onToggleTimer,
+  onResetTimer,
   onAdjustMinutes,
   onCompleteActiveTask,
   onSelectViewMode,
@@ -32,8 +34,11 @@ export const FocusView: React.FC<FocusViewProps> = ({
   spotifyTrack,
   onSpotifyControl,
 }) => {
-  const targetTotalSeconds = targetMinutes * 60;
-  const remainingSeconds = Math.max(0, targetTotalSeconds - focusSeconds);
+  const targetTotalSeconds = (activeTask?.estimatedMinutes ?? targetMinutes) * 60;
+  const elapsedSeconds = activeTask?.estimatedMinutes != null
+    ? activeTask.elapsedFocusSeconds
+    : focusSeconds;
+  const remainingSeconds = Math.max(0, targetTotalSeconds - elapsedSeconds);
   const countdownStr = formatCountdown(remainingSeconds);
 
   return (
@@ -45,7 +50,8 @@ export const FocusView: React.FC<FocusViewProps> = ({
         padding: '12px 14px',
         display: 'flex',
         flexDirection: 'column',
-        gap: 12,
+        gap: 10,
+        overflowY: 'auto',
         boxSizing: 'border-box',
       }}
     >
@@ -145,6 +151,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
         targetMinutes={targetMinutes}
         viewMode={viewMode}
         onToggleTimer={onToggleTimer}
+        onResetTimer={onResetTimer}
         onAdjustMinutes={onAdjustMinutes}
         onCompleteActiveTask={onCompleteActiveTask}
         onSelectViewMode={onSelectViewMode}

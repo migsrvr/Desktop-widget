@@ -6,6 +6,7 @@ interface TransportBarProps {
   targetMinutes: number;
   viewMode: ViewMode;
   onToggleTimer: () => void;
+  onResetTimer?: () => void;
   onAdjustMinutes: (delta: number) => void;
   onCompleteActiveTask: () => void;
   onSelectViewMode: (mode: ViewMode) => void;
@@ -18,6 +19,7 @@ export const TransportBar: React.FC<TransportBarProps> = ({
   targetMinutes,
   viewMode,
   onToggleTimer,
+  onResetTimer,
   onAdjustMinutes,
   onCompleteActiveTask,
   onSelectViewMode,
@@ -41,7 +43,8 @@ export const TransportBar: React.FC<TransportBarProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 8,
+          gap: 6,
+          flexWrap: 'wrap',
         }}
       >
         {/* START / PAUSE Toggle Button */}
@@ -50,22 +53,33 @@ export const TransportBar: React.FC<TransportBarProps> = ({
           className="session-btn-primary"
           style={{
             flex: 1,
-            padding: '7px 12px',
+            padding: '7px 8px',
             fontSize: 12,
             letterSpacing: '0.04em',
             textAlign: 'center',
           }}
           title={isTimerRunning ? 'Pause focus timer' : 'Start focus timer'}
         >
-          {isTimerRunning ? 'PAUSE' : 'START / PAUSE'}
+          {isTimerRunning ? 'PAUSE' : 'START'}
         </button>
+
+        {onResetTimer && (
+          <button
+            onClick={onResetTimer}
+            className="session-btn"
+            style={{ padding: '7px 8px', fontSize: 12 }}
+            title="Reset focus timer"
+          >
+            RESET
+          </button>
+        )}
 
         {/* Stepper: − 30 MIN + */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
+            gap: 2,
             backgroundColor: 'var(--session-surface)',
             border: '1px solid var(--session-border)',
             borderRadius: 'var(--radius-sm)',
@@ -129,7 +143,7 @@ export const TransportBar: React.FC<TransportBarProps> = ({
           disabled={!hasActiveTask}
           className="session-btn"
           style={{
-            padding: '7px 14px',
+            padding: '7px 8px',
             fontSize: 12,
             letterSpacing: '0.04em',
             opacity: hasActiveTask ? 1 : 0.4,

@@ -22,6 +22,7 @@ import { OperatorCard } from './OperatorCard';
 
 interface ExpandedPanelProps {
   tasks: Task[];
+  activeDate: string;
   pastCompletedTasks?: Task[];
   activeTask: Task | null;
   aiRun: AiRun | null;
@@ -47,7 +48,9 @@ interface ExpandedPanelProps {
   onSelectActiveTask: (id: string) => void;
   onUpdateTaskStatus: (id: string, status: TaskStatus) => void;
   onDeleteTask: (id: string) => void;
-  onAddTask: (title: string, status: TaskStatus) => void;
+  onAddTask: (title: string, status: TaskStatus, estimatedMinutes?: number) => void;
+  onSetTaskPomodoro: (id: string, minutes: number | undefined) => void;
+  onResetTaskTimer: (id: string) => void;
   onClearPastTasks?: () => void;
   onCompleteActiveTask?: () => void;
   onSelectViewMode?: (mode: ViewMode) => void;
@@ -78,6 +81,7 @@ interface ExpandedPanelProps {
 
 export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   tasks,
+  activeDate,
   pastCompletedTasks = [],
   activeTask,
   aiRun,
@@ -95,11 +99,14 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   onToggleAlwaysOnTop,
   onToggleMute,
   onToggleTimer,
+  onResetTimer,
   onAdjustMinutes,
   onSelectActiveTask,
   onUpdateTaskStatus,
   onDeleteTask,
   onAddTask,
+  onSetTaskPomodoro,
+  onResetTaskTimer,
   onClearPastTasks,
   onCompleteActiveTask = () => {},
   onSelectViewMode = () => {},
@@ -374,6 +381,9 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
           >
             <TaskList
               tasks={tasks}
+              activeDate={activeDate}
+              onSetTaskPomodoro={onSetTaskPomodoro}
+              onResetTaskTimer={onResetTaskTimer}
               pastCompletedTasks={pastCompletedTasks}
               onSelectActive={onSelectActiveTask}
               onUpdateStatus={onUpdateTaskStatus}
@@ -481,6 +491,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
             targetMinutes={targetMinutes}
             viewMode={viewMode}
             onToggleTimer={onToggleTimer}
+            onResetTimer={onResetTimer}
             onAdjustMinutes={onAdjustMinutes}
             onCompleteActiveTask={onCompleteActiveTask}
             onSelectViewMode={onSelectViewMode}

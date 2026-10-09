@@ -507,3 +507,96 @@ export function mapTaskToDisplayState(task: Task | null, isTimerRunning: boolean
   return isTimerRunning ? 'IN_FOCUS' : 'PAUSED';
 }
 
+export interface PastDateGroup {
+  date: string; // YYYY-MM-DD
+  formattedLabel: string; // e.g. "Yesterday · Oct 9, 2026" or "Wed, Oct 8, 2026"
+  tasks: Task[];
+}
+
+/**
+ * Formats a YYYY-MM-DD date string into a friendly airport log label relative to today.
+ */
+export function formatPastDateLabel(dateStr: string, todayDateStr: string): string {
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const [y, m, d] = parts.map(Number);
+    if (!y || !m || !d) return dateStr;
+
+    const dateObj = new Date(y, m - 1, d);
+
+    const todayParts = todayDateStr.split('-');
+    if (todayParts.length === 3) {
+      const [ty, tm, td] = todayParts.map(Number);
+      const todayObj = new Date(ty, tm - 1, td);
+      const diffDays = Math.round((todayObj.getTime() - dateObj.getTime()) / (1000 * 60 * 60 * 24));
+
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const month = monthNames[m - 1] || '';
+      const dayFormatted = `${month} ${d}, ${y}`;
+
+      if (diffDays === 1) {
+        return `Yesterday · ${dayFormatted}`;
+      }
+      const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const weekday = weekdayNames[dateObj.getDay()] || '';
+      return `${weekday}, ${dayFormatted}`;
+    }
+    return dateStr;
+  } catch {
+    return dateStr;
+  }
+}
+
+/**
+ * Groups past completed tasks by their completion date (or dayPlanDate fallback),
+ * sorted descending with the most recent past date first.
+ */
+export function groupPastCompletedTasksByDate(pastTasks: Task[], todayDate: string): PastDateGroup[] {
+  const groupsMap = new Map<string, Task[]>();
+
+  for (const task of pastTasks) {
+    const rawDate = task.completedAt ? task.completedAt.slice(0, 10) : task.dayPlanDate;
+    const dateKey = rawDate || 'Earlier';
+    if (!groupsMap.has(dateKey)) {
+      groupsMap.set(dateKey, []);
+    }
+    groupsMap.get(dateKey)!.push(task);
+  }
+
+  // Sort descending: newest date first
+  const sortedDates = Array.from(groupsMap.keys()).sort((a, b) => b.localeCompare(a));
+
+  return sortedDates.map((date) => ({
+    date,
+    formattedLabel: formatPastDateLabel(date, todayDate),
+    tasks: groupsMap.get(date) || [],
+  }));
+}
+
+/**
+ * Formats task duration for display in the airport departures board.
+ * - If estimatedMinutes is set and elapsed > 0: "04:20 / 25m"
+ * - If estimatedMinutes is set and elapsed == 0: "25m"
+ * - If only elapsed > 0: "04:20"
+ * - Otherwise: "--"
+ */
+export function formatPomodoroDuration(elapsedSeconds: number, estimatedMinutes?: number): string {
+  const safeElapsed = Math.max(0, Math.floor(elapsedSeconds || 0));
+  if (estimatedMinutes && estimatedMinutes > 0) {
+    if (safeElapsed > 0) {
+      const mins = Math.floor(safeElapsed / 60);
+      const secs = safeElapsed % 60;
+      const elapsedStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      return `${elapsedStr} / ${estimatedMinutes}m`;
+    }
+    return `${estimatedMinutes}m`;
+  }
+  if (safeElapsed > 0) {
+    const mins = Math.floor(safeElapsed / 60);
+    const secs = safeElapsed % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return '--';
+}
+
