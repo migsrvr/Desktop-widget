@@ -90,6 +90,12 @@ fn minimize_window(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn exit_app(app: AppHandle) -> Result<(), String> {
+    app.exit(0);
+    Ok(())
+}
+
+#[tauri::command]
 async fn spotify_start_login(client_id: String) -> Result<String, String> {
     let trimmed_id = client_id.trim();
     if trimmed_id.is_empty() {
@@ -389,7 +395,8 @@ fn main() {
             get_screen_status,
             toggle_watching,
             capture_now,
-            operator_approve
+            operator_approve,
+            exit_app
         ])
         .setup(|app| {
             // Build Windows System Tray

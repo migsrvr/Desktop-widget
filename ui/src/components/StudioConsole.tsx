@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
+import React, { useId, useRef, useState } from 'react';
 import {
   AiRun,
   TimelineEvent,
-  SpotifyTrack,
-  SpotifyPlaybackAction,
   ScreenMode,
   ScreenFrameMeta,
   VisionInference,
@@ -23,386 +21,158 @@ interface StudioConsoleProps {
   onOperatorCapture?: () => void;
   onOperatorApprove?: () => void;
   onOperatorDeny?: () => void;
-  spotifyTrack?: SpotifyTrack | null;
-  isSpotifyConnected?: boolean;
-  isSpotifyConnecting?: boolean;
-  onOpenSpotifySetup?: () => void;
-  onSpotifyControl?: (action: SpotifyPlaybackAction) => void;
-  onDetectSpotifyLocal?: () => void;
 }
+
+type Channel = 'agent' | 'screen';
+
+const configuredRoles = [
+  { name: 'Gemini Planner', role: 'Overall Planner & PM' },
+  { name: 'Codex Senior', role: 'Engineering Lead & Subagent Coordinator' },
+  { name: 'Muse Junior', role: 'Independent Worker' },
+];
 
 export const StudioConsole: React.FC<StudioConsoleProps> = ({
   aiRun,
-  timeline = [],
   operatorWatching = false,
   operatorMode = 'MONITOR',
   operatorFrame,
   operatorInference,
   operatorProposal,
-  operatorThumbUrl = '',
   onToggleOperatorWatching,
   onOperatorCapture,
   onOperatorApprove,
   onOperatorDeny,
-  spotifyTrack,
-  isSpotifyConnected = false,
-  isSpotifyConnecting = false,
-  onOpenSpotifySetup,
-  onSpotifyControl,
-  onDetectSpotifyLocal,
 }) => {
-  const [activeChannelDetail, setActiveChannelDetail] = useState<'agent' | 'screen' | 'audio' | null>(null);
-
-  // Agent channel details
-  const agentName = aiRun?.agentName || 'OpenCode';
-  const getAgentStatusText = () => {
-    if (!aiRun) return 'Standby';
-    switch (aiRun.status) {
-      case 'WAITING_INPUT':
-        return 'Waiting';
-      case 'WORKING':
-      case 'RUNNING_TOOLS':
-        return 'Working';
-      case 'PLANNING':
-        return 'Planning';
-      case 'COMPLETED':
-        return 'Done';
-      case 'FAILED':
-        return 'Error';
-      default:
-        return 'Standby';
-    }
+  const [activeChannelDetail, setActiveChannelDetail] = useState<Channel | null>(null);
+  const drawerId = useId();
+  const agentButton = useRef<HTMLButtonElement>(null);
+  const screenButton = useRef<HTMLButtonElement>(null);
+  const statusLabels: Record<AiRun['status'], string> = {
+    QUEUED: 'Queued',
+    PLANNING: 'Orchestrating',
+    WORKING: 'Working',
+    RUNNING_TOOLS: 'Running tools',
+    WAITING_INPUT: 'Waiting for input',
+    COMPLETED: 'Completed',
+    FAILED: 'Failed',
+    CANCELLED: 'Cancelled',
   };
-  const agentStatusText = getAgentStatusText();
-  const isAgentWorking = aiRun?.status === 'WORKING' || aiRun?.status === 'RUNNING_TOOLS' || aiRun?.status === 'PLANNING';
-
-  // Screen operator channel details
-  const getScreenStatusText = () => {
-    if (!operatorWatching) return 'Standby';
-    if (operatorMode === 'OPERATOR') return 'Operator';
-    if (operatorMode === 'ON_DEMAND') return 'On-demand';
-    return 'Monitoring';
-  };
-  const screenStatusText = getScreenStatusText();
+  const agentStatusText = aiRun ? statusLabels[aiRun.status] : 'Standby';
+  const isAgentWorking = aiRun?.status === 'PLANNING' || aiRun?.status === 'WORKING' || aiRun?.status === 'RUNNING_TOOLS';
+  const screenStatusText = !operatorWatching ? 'Standby'
+    : operatorMode === 'OPERATOR' ? 'Operator'
+    : operatorMode === 'ON_DEMAND' ? 'On-demand' : 'Monitoring';
   const screenSubText = operatorWatching && operatorFrame
     ? `${operatorFrame.width}×${operatorFrame.height}`
-    : operatorWatching
-    ? 'Monitoring'
-    : 'Standby';
-
-  // Audio channel details
-  const audioTitle = !isSpotifyConnected
-    ? 'Connect audio'
-    : spotifyTrack
-    ? spotifyTrack.name
-    : 'Ready';
-  const audioSubText = !isSpotifyConnected
-    ? 'Offline'
-    : spotifyTrack
-    ? `${spotifyTrack.isPlaying ? 'Playing' : 'Paused'} · ${spotifyTrack.artist}`
-    : 'Connected';
-
-  const toggleDetail = (channel: 'agent' | 'screen' | 'audio') => {
-    setActiveChannelDetail((prev) => (prev === channel ? null : channel));
+    : operatorWatching ? 'Waiting for a frame' : 'Standby';
+  const toggleDetail = (channel: Channel) => {
+    setActiveChannelDetail((previous) => previous === channel ? null : channel);
+  };
+  const closeDetail = () => {
+    const trigger = activeChannelDetail === 'agent' ? agentButton : screenButton;
+    setActiveChannelDetail(null);
+    trigger.current?.focus();
+  };
+  const channelStyle: React.CSSProperties = {
+    display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+    gap: 4, minWidth: 0, padding: '8px 10px', border: 0,
+    textAlign: 'left', cursor: 'pointer', color: 'var(--session-text-primary)',
+    fontFamily: 'inherit',
+  };
+  const metaStyle: React.CSSProperties = {
+    fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', color: 'var(--session-text-secondary)',
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        width: '100%',
-        backgroundColor: 'var(--session-surface)',
-        border: '1px solid var(--session-border)',
-        borderRadius: 'var(--radius-md)',
-        boxSizing: 'border-box',
-        overflow: 'hidden',
-      }}
-    >
-      {/* 3 Channels Grid Rack */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr',
-          width: '100%',
-        }}
-      >
-        {/* CHANNEL 01: AGENT */}
-        <div
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', backgroundColor: 'var(--session-surface)', border: '1px solid var(--session-border)', borderRadius: 'var(--radius-md)', boxSizing: 'border-box', overflow: 'hidden' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', width: '100%' }}>
+        <button
+          ref={agentButton}
+          type="button"
           onClick={() => toggleDetail('agent')}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 4,
-            padding: '8px 10px',
-            borderRight: '1px solid var(--session-border)',
-            cursor: 'pointer',
-            backgroundColor: activeChannelDetail === 'agent' ? 'var(--session-surface-active)' : 'transparent',
-            transition: 'background 0.12s ease',
-          }}
-          title="Click to view agent details"
+          aria-expanded={activeChannelDetail === 'agent'}
+          aria-controls={drawerId}
+          style={{ ...channelStyle, borderRight: '1px solid var(--session-border)', backgroundColor: activeChannelDetail === 'agent' ? 'var(--session-surface-active)' : 'transparent' }}
         >
-          <span
-            className="session-mono"
-            style={{
-              fontSize: 11.5,
-              fontWeight: 700,
-              letterSpacing: '0.06em',
-              color: 'var(--session-text-secondary)',
-            }}
-          >
-            01 / AGENT
+          <span className="session-mono" style={metaStyle}>01 / AGENT FLEET</span>
+          <span className="session-mono" style={{ ...metaStyle, fontSize: 9, fontWeight: 500 }}>AGENT MANAGER</span>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>Gemini Planner → Codex Senior</span>
+          {aiRun && <span style={{ fontSize: 11, overflowWrap: 'anywhere' }}>Current run · {aiRun.agentName}</span>}
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {isAgentWorking && <span aria-hidden="true" className="fleet-breathing-dot" />}
+            <span className="session-mono" style={{ fontSize: 11, color: isAgentWorking ? '#FFFFFF' : 'var(--session-text-secondary)' }}>{agentStatusText}</span>
           </span>
-          <span
-            style={{
-              fontSize: 13.5,
-              fontWeight: 600,
-              color: 'var(--session-text-primary)',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-            title={agentName}
-          >
-            {agentName}
+          <span className="session-mono" style={{ fontSize: 10, color: 'var(--session-text-secondary)' }}>
+            Configured workflow · 3 Sessions (Planner · Lead · Worker)
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            {isAgentWorking && (
-              <span
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  backgroundColor: '#FFFFFF',
-                  display: 'inline-block',
-                }}
-              />
-            )}
-            <span
-              className="session-mono"
-              style={{
-                fontSize: 12,
-                color: isAgentWorking ? '#FFFFFF' : 'var(--session-text-secondary)',
-              }}
-            >
-              {agentStatusText}
-            </span>
-          </div>
-
-          {/* Graduated step meter or files preview */}
-          <div
-            className="session-mono"
-            style={{
-              fontSize: 11,
-              color: 'var(--session-text-secondary)',
-              marginTop: 2,
-              letterSpacing: '1px',
-            }}
-          >
-            {aiRun?.modifiedFiles && aiRun.modifiedFiles.length > 0
-              ? `${aiRun.modifiedFiles.length} files`
-              : '▯▯▯▯▯▯▯▯▯▯'}
-          </div>
-        </div>
-
-        {/* CHANNEL 02: SCREEN */}
-        <div
+        </button>
+        <button
+          ref={screenButton}
+          type="button"
           onClick={() => toggleDetail('screen')}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 4,
-            padding: '8px 10px',
-            borderRight: '1px solid var(--session-border)',
-            cursor: 'pointer',
-            backgroundColor: activeChannelDetail === 'screen' ? 'var(--session-surface-active)' : 'transparent',
-            transition: 'background 0.12s ease',
-          }}
-          title="Click to view screen operator controls"
+          aria-expanded={activeChannelDetail === 'screen'}
+          aria-controls={drawerId}
+          style={{ ...channelStyle, backgroundColor: activeChannelDetail === 'screen' ? 'var(--session-surface-active)' : 'transparent' }}
         >
-          <span
-            className="session-mono"
-            style={{
-              fontSize: 11.5,
-              fontWeight: 700,
-              letterSpacing: '0.06em',
-              color: 'var(--session-text-secondary)',
-            }}
-          >
-            02 / SCREEN
+          <span className="session-mono" style={metaStyle}>02 / SCREEN OPERATOR</span>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>Screen operator</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#FFFFFF', opacity: operatorWatching ? 1 : 0.35 }} />
+            <span className="session-mono" style={{ fontSize: 11, color: operatorWatching ? '#FFFFFF' : 'var(--session-text-secondary)' }}>{screenStatusText}</span>
           </span>
-          <span
-            style={{
-              fontSize: 13.5,
-              fontWeight: 600,
-              color: 'var(--session-text-primary)',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            Screen operator
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                backgroundColor: '#FFFFFF',
-                opacity: operatorWatching ? 1 : 0.35,
-                display: 'inline-block',
-              }}
-            />
-            <span
-              className="session-mono"
-              style={{
-                fontSize: 12,
-                color: operatorWatching ? '#FFFFFF' : 'var(--session-text-secondary)',
-              }}
-            >
-              {screenStatusText}
-            </span>
-          </div>
-          <span
-            className="session-mono"
-            style={{
-              fontSize: 11,
-              color: 'var(--session-text-secondary)',
-              marginTop: 2,
-            }}
-          >
-            {screenSubText}
-          </span>
-        </div>
-
-        {/* CHANNEL 03: AUDIO */}
-        <div
-          onClick={() => toggleDetail('audio')}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 4,
-            padding: '8px 10px',
-            cursor: 'pointer',
-            backgroundColor: activeChannelDetail === 'audio' ? 'var(--session-surface-active)' : 'transparent',
-            transition: 'background 0.12s ease',
-          }}
-          title="Click to view audio / Spotify controls"
-        >
-          <span
-            className="session-mono"
-            style={{
-              fontSize: 11.5,
-              fontWeight: 700,
-              letterSpacing: '0.06em',
-              color: 'var(--session-text-secondary)',
-            }}
-          >
-            03 / AUDIO
-          </span>
-          <span
-            style={{
-              fontSize: 13.5,
-              fontWeight: 600,
-              color: 'var(--session-text-primary)',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            Spotify
-          </span>
-          <span
-            className="session-mono"
-            style={{
-              fontSize: 12,
-              color: spotifyTrack ? '#FFFFFF' : 'var(--session-text-secondary)',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-            title={audioTitle}
-          >
-            {audioTitle}
-          </span>
-          <span
-            className="session-mono"
-            style={{
-              fontSize: 11,
-              color: 'var(--session-text-secondary)',
-              marginTop: 2,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {audioSubText}
-          </span>
-        </div>
+          <span className="session-mono" style={{ fontSize: 11, color: 'var(--session-text-secondary)' }}>{screenSubText}</span>
+        </button>
       </div>
-
-      {/* Expandable Detail Drawer (Opens below the 3 channels when tapped) */}
       {activeChannelDetail && (
         <div
-          style={{
-            padding: '10px 12px',
-            borderTop: '1px solid var(--session-border)',
-            backgroundColor: 'var(--session-bg)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
-            maxHeight: 180,
-            overflowY: 'auto',
+          id={drawerId}
+          role="region"
+          aria-label={activeChannelDetail === 'agent' ? 'Agent Fleet details' : 'Screen operator controls'}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.stopPropagation();
+              closeDetail();
+            }
           }}
+          style={{ padding: '10px 12px', borderTop: '1px solid var(--session-border)', backgroundColor: 'var(--session-bg)', display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 180, overflowY: 'auto' }}
         >
-          {/* Detail Drawer Header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span
-              className="session-mono"
-              style={{ fontSize: 11, fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.05em' }}
-            >
-              {activeChannelDetail === 'agent'
-                ? 'CHANNEL 01 / AGENT TELEMETRY'
-                : activeChannelDetail === 'screen'
-                ? 'CHANNEL 02 / SCREEN OPERATOR CONTROLS'
-                : 'CHANNEL 03 / SPOTIFY AUDIO PLAYBACK'}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <span className="session-mono" style={{ fontSize: 11, fontWeight: 700, color: '#FFFFFF' }}>
+              {activeChannelDetail === 'agent' ? 'CHANNEL 01 / AGENT FLEET TELEMETRY' : 'CHANNEL 02 / SCREEN OPERATOR CONTROLS'}
             </span>
-            <button
-              onClick={() => setActiveChannelDetail(null)}
-              className="session-btn"
-              style={{ padding: '1px 5px', fontSize: 10 }}
-              title="Close channel details"
-            >
-              ✕
-            </button>
+            <button type="button" onClick={closeDetail} className="session-btn" style={{ padding: '1px 5px', fontSize: 10 }} aria-label="Close channel details">✕</button>
           </div>
-
-          {/* AGENT DETAIL DRAWER */}
           {activeChannelDetail === 'agent' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: 12, color: 'var(--session-text-primary)', lineHeight: 1.4 }}>
-                {aiRun?.currentStepDescription || 'Waiting for agent workflow…'}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="session-mono" style={{ fontSize: 10, color: 'var(--session-text-secondary)' }}>Configured workflow roles</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 6 }}>
+                {configuredRoles.map(({ name, role }) => (
+                  <div key={name} style={{ padding: '7px 8px', border: '1px solid var(--session-border)', borderRadius: 'var(--radius-sm)' }}>
+                    <div style={{ fontSize: 12, fontWeight: 600 }}>{name}</div>
+                    <div style={{ fontSize: 10, lineHeight: 1.4, color: 'var(--session-text-secondary)', marginTop: 3 }}>{role}</div>
+                  </div>
+                ))}
               </div>
-              {aiRun?.goal && (
-                <div style={{ fontSize: 11, color: 'var(--session-text-secondary)' }}>
-                  Goal: {aiRun.goal}
+              {aiRun ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, fontSize: 11, overflowWrap: 'anywhere' }}>
+                  <div>Current run: {aiRun.agentName} · {agentStatusText}</div>
+                  <div>Goal: {aiRun.goal || 'No goal reported'}</div>
+                  <div>Step: {aiRun.currentStepDescription || 'No step reported'}
+                    {aiRun.currentStep != null && ` · ${aiRun.currentStep}${aiRun.totalSteps != null ? ` / ${aiRun.totalSteps}` : ''}`}
+                  </div>
+                  <div>Files modified: {aiRun.filesModifiedCount}</div>
+                  <div className="session-mono">Tests: {aiRun.testStatus}{aiRun.testSummary ? ` · ${aiRun.testSummary}` : ''}</div>
+                  {aiRun.modifiedFiles && aiRun.modifiedFiles.length > 0 && (
+                    <div style={{ color: 'var(--session-text-secondary)' }}>
+                      Changed: {aiRun.modifiedFiles.slice(0, 3).join(', ')}
+                      {aiRun.modifiedFiles.length > 3 ? ` +${aiRun.modifiedFiles.length - 3} more` : ''}
+                    </div>
+                  )}
+                  {aiRun.summary && <div>Summary: {aiRun.summary}</div>}
                 </div>
-              )}
-              {aiRun?.testStatus && aiRun.testStatus !== 'NOT_RUN' && (
-                <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: '#FFFFFF' }}>
-                  Tests: {aiRun.testStatus} {aiRun.testSummary ? `· ${aiRun.testSummary}` : ''}
-                </div>
-              )}
-              {aiRun?.modifiedFiles && aiRun.modifiedFiles.length > 0 && (
-                <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--session-text-secondary)' }}>
-                  Changed: {aiRun.modifiedFiles.slice(0, 3).join(', ')}
-                  {aiRun.modifiedFiles.length > 3 ? ` +${aiRun.modifiedFiles.length - 3} more` : ''}
-                </div>
-              )}
+              ) : <div style={{ fontSize: 11, color: 'var(--session-text-secondary)' }}>No agent run reported. Workflow roles are configured; live session activity is unavailable.</div>}
             </div>
           )}
-
           {/* SCREEN DETAIL DRAWER */}
           {activeChannelDetail === 'screen' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -471,61 +241,6 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
             </div>
           )}
 
-          {/* AUDIO DETAIL DRAWER */}
-          {activeChannelDetail === 'audio' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {isSpotifyConnected ? (
-                <>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#FFFFFF' }}>
-                    {spotifyTrack ? `${spotifyTrack.name} — ${spotifyTrack.artist}` : 'Connected (No active playback)'}
-                  </div>
-                  {onSpotifyControl && (
-                    <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                      <button
-                        onClick={() => onSpotifyControl('PREVIOUS')}
-                        className="session-btn"
-                        style={{ fontSize: 11 }}
-                      >
-                        ⏮ Prev
-                      </button>
-                      <button
-                        onClick={() => onSpotifyControl(spotifyTrack?.isPlaying ? 'PAUSE' : 'PLAY')}
-                        className="session-btn-primary"
-                        style={{ fontSize: 11 }}
-                      >
-                        {spotifyTrack?.isPlaying ? '⏸ Pause' : '▶ Play'}
-                      </button>
-                      <button
-                        onClick={() => onSpotifyControl('NEXT')}
-                        className="session-btn"
-                        style={{ fontSize: 11 }}
-                      >
-                        Next ⏭
-                      </button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 11, color: 'var(--session-text-secondary)' }}>
-                    Spotify not connected
-                  </span>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    {onDetectSpotifyLocal && (
-                      <button onClick={onDetectSpotifyLocal} className="session-btn" style={{ fontSize: 11 }}>
-                        Detect Windows
-                      </button>
-                    )}
-                    {onOpenSpotifySetup && (
-                      <button onClick={onOpenSpotifySetup} className="session-btn-primary" style={{ fontSize: 11 }}>
-                        {isSpotifyConnecting ? 'Connecting…' : 'Setup'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       )}
     </div>

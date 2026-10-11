@@ -454,3 +454,23 @@ button:active {
 .animate-mono-pulse {
   animation: monoPulse 2.2s infinite ease-in-out;
 }
+
+/* Agent Fleet activity indicator */
+.fleet-breathing-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  animation: fleet-breathe 2s ease-in-out infinite;
+}
+
+@keyframes fleet-breathe {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fleet-breathing-dot { animation: none; }
+}

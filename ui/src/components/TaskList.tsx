@@ -329,7 +329,7 @@ export const TaskList: React.FC<TaskListProps> = ({
         height: '100%',
         boxSizing: 'border-box',
         minHeight: 0,
-        overflowY: 'auto',
+        overflow: 'hidden',
       }}
     >
       {/* Airport Departure Board Table Header */}
@@ -398,13 +398,15 @@ export const TaskList: React.FC<TaskListProps> = ({
         <span style={{ width: 14, flexShrink: 0 }} />
       </div>
 
-      {/* Task Rows Queue — shares scrolling with completed history */}
+      {/* Active queue receives the remaining space above pinned controls and history. */}
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           gap: 2,
-          flexShrink: 0,
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
           paddingTop: 2,
         }}
       >
@@ -426,100 +428,103 @@ export const TaskList: React.FC<TaskListProps> = ({
       </div>
 
       {/* + Add Task Action Row */}
-      {isAdding ? (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            flexShrink: 0,
-            gap: 6,
-            padding: '4px 8px',
-            backgroundColor: 'var(--session-surface)',
-            border: '1px solid var(--session-border)',
-            borderRadius: 'var(--radius-sm)',
-            marginTop: 4,
-          }}
-        >
-          <span className="session-mono" style={{ fontSize: 12, color: 'var(--session-text-secondary)' }}>
-            +
-          </span>
-          <input
-            type="text"
-            autoFocus
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type task title and press Enter…"
-            aria-label="New task title"
+      <div style={{ flexShrink: 0 }}>
+        {isAdding ? (
+          <div
             style={{
-              flex: 1,
-              minWidth: 0,
+              display: 'flex',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              flexShrink: 0,
+              gap: 6,
+              padding: '4px 8px',
+              backgroundColor: 'var(--session-surface)',
+              border: '1px solid var(--session-border)',
+              borderRadius: 'var(--radius-sm)',
+              marginTop: 4,
+            }}
+          >
+            <span className="session-mono" style={{ fontSize: 12, color: 'var(--session-text-secondary)' }}>
+              +
+            </span>
+            <input
+              type="text"
+              autoFocus
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type task title and press Enter…"
+              aria-label="New task title"
+              style={{
+                flex: 1,
+                minWidth: 0,
+                background: 'transparent',
+                border: 'none',
+                color: '#FFFFFF',
+                fontSize: 12,
+                fontFamily: 'var(--font-mono)',
+              }}
+            />
+            <div role="group" aria-label="New task Pomodoro duration" style={{ display: 'flex', flexWrap: 'wrap', gap: 4, width: '100%', order: 1 }}>
+              {durationPresets.map((minutes) => (
+                <button
+                  key={minutes ?? 'none'}
+                  type="button"
+                  className={`session-btn ${newPomodoroMinutes === minutes ? 'active' : ''}`}
+                  aria-pressed={newPomodoroMinutes === minutes}
+                  onClick={() => setNewPomodoroMinutes(minutes)}
+                  style={{ padding: '3px 8px', fontSize: 11 }}
+                >
+                  {minutes == null ? 'None' : `${minutes}m`}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={handleSubmit}
+              disabled={!newTitle.trim()}
+              className="session-btn"
+              style={{ padding: '2px 8px', fontSize: 11 }}
+            >
+              Add
+            </button>
+            <button
+              onClick={() => setIsAdding(false)}
+              className="session-btn"
+              style={{ padding: '2px 6px', fontSize: 11, color: 'var(--session-text-secondary)' }}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setIsAdding(true)}
+            style={{
+              alignSelf: 'flex-start',
               background: 'transparent',
               border: 'none',
-              color: '#FFFFFF',
-              fontSize: 12,
+              color: 'var(--session-text-secondary)',
               fontFamily: 'var(--font-mono)',
+              fontSize: 13,
+              fontWeight: 600,
+              padding: '6px 8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              transition: 'color 0.12s ease',
             }}
-          />
-          <div role="group" aria-label="New task Pomodoro duration" style={{ display: 'flex', flexWrap: 'wrap', gap: 4, width: '100%', order: 1 }}>
-            {durationPresets.map((minutes) => (
-              <button
-                key={minutes ?? 'none'}
-                type="button"
-                className={`session-btn ${newPomodoroMinutes === minutes ? 'active' : ''}`}
-                aria-pressed={newPomodoroMinutes === minutes}
-                onClick={() => setNewPomodoroMinutes(minutes)}
-                style={{ padding: '3px 8px', fontSize: 11 }}
-              >
-                {minutes == null ? 'None' : `${minutes}m`}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={handleSubmit}
-            disabled={!newTitle.trim()}
-            className="session-btn"
-            style={{ padding: '2px 8px', fontSize: 11 }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#FFFFFF')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--session-text-secondary)')}
           >
-            Add
+            + Add task
           </button>
-          <button
-            onClick={() => setIsAdding(false)}
-            className="session-btn"
-            style={{ padding: '2px 6px', fontSize: 11, color: 'var(--session-text-secondary)' }}
-          >
-            Cancel
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => setIsAdding(true)}
-          style={{
-            alignSelf: 'flex-start',
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--session-text-secondary)',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 13,
-            fontWeight: 600,
-            padding: '6px 8px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            transition: 'color 0.12s ease',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#FFFFFF')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--session-text-secondary)')}
-        >
-          + Add task
-        </button>
-      )}
+        )}
+
+      </div>
 
       {/* Collapsible Completed Section */}
       {doneTasks.length > 0 && (
-        <div style={{ marginTop: 4, borderTop: '1px solid var(--session-border)', paddingTop: 4 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0, minHeight: 0, maxHeight: 'min(100px, 24%)', boxSizing: 'border-box', overflow: 'hidden', marginTop: 4, borderTop: '1px solid var(--session-border)', paddingTop: 4 }}>
           <button
             type="button"
             aria-expanded={!isDoneCollapsed}
@@ -535,6 +540,7 @@ export const TaskList: React.FC<TaskListProps> = ({
               fontSize: 11.5,
               fontFamily: 'var(--font-mono)',
               userSelect: 'none',
+              flexShrink: 0,
               background: 'transparent',
               border: 0,
             }}
@@ -544,7 +550,7 @@ export const TaskList: React.FC<TaskListProps> = ({
           </button>
 
           {!isDoneCollapsed && (
-            <div id="completed-today-tasks" style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 4 }}>
+            <div id="completed-today-tasks" style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 4, minHeight: 0, maxHeight: 100, overflowY: 'auto' }}>
               {doneTasks.map((t, idx) => renderAirportRow(t, pendingTasks.length + idx, true))}
             </div>
           )}
@@ -553,12 +559,13 @@ export const TaskList: React.FC<TaskListProps> = ({
 
       {/* Collapsible Past Days Completed */}
       {pastCompletedTasks.length > 0 && (
-        <div style={{ marginTop: 2, borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: 4 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0, minHeight: 0, maxHeight: 'min(140px, 30%)', boxSizing: 'border-box', overflow: 'hidden', marginTop: 2, backgroundColor: 'rgba(0, 0, 0, 0.18)', border: '1px solid var(--session-border)', borderRadius: 'var(--radius-sm)', paddingTop: 4 }}>
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
+              flexShrink: 0,
               padding: '2px 8px',
             }}
           >
@@ -598,7 +605,7 @@ export const TaskList: React.FC<TaskListProps> = ({
           </div>
 
           {!isPastCollapsed && (
-            <div id="previous-days-tasks" style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 4 }}>
+            <div id="previous-days-tasks" style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 4, minHeight: 0, maxHeight: 140, overflowY: 'auto' }}>
               {pastDateGroups.map((group) => {
                 const collapsed = collapsedDates.has(group.date);
                 return (

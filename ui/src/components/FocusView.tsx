@@ -15,6 +15,8 @@ interface FocusViewProps {
   onCompleteActiveTask: () => void;
   onSelectViewMode: (mode: ViewMode) => void;
   onOpenIde?: () => void;
+  onExitApp?: () => void;
+  onMinimizeToTaskbar?: () => void;
   spotifyTrack?: SpotifyTrack | null;
   onSpotifyControl?: (action: SpotifyPlaybackAction) => void;
 }
@@ -31,6 +33,8 @@ export const FocusView: React.FC<FocusViewProps> = ({
   onCompleteActiveTask,
   onSelectViewMode,
   onOpenIde,
+  onExitApp,
+  onMinimizeToTaskbar,
   spotifyTrack,
   onSpotifyControl,
 }) => {
@@ -81,7 +85,18 @@ export const FocusView: React.FC<FocusViewProps> = ({
             / FOCUS MODE
           </span>
         </div>
-
+        <div className="non-drag" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          {onMinimizeToTaskbar && (
+            <button onClick={onMinimizeToTaskbar} className="session-btn" style={{ padding: '2px 7px', fontSize: 11 }} title="Minimize widget" aria-label="Minimize widget">
+              −
+            </button>
+          )}
+          {onExitApp && (
+            <button onClick={onExitApp} className="session-btn" style={{ padding: '2px 7px', fontSize: 11 }} title="Exit application" aria-label="Exit application">
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Hero Task Title */}

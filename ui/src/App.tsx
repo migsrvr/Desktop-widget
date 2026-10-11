@@ -22,6 +22,7 @@ export const App: React.FC = () => {
     todaysRemainingCount,
     isAlwaysOnTop,
     minimizeToTaskbar,
+    exitApp,
     isMuted,
     isTimerRunning,
     focusSeconds,
@@ -173,7 +174,6 @@ export const App: React.FC = () => {
             doneCount={todaysDoneCount}
             remainingCount={todaysRemainingCount}
             isAlwaysOnTop={isAlwaysOnTop}
-            isMuted={isMuted}
             isTimerRunning={isTimerRunning}
             focusSeconds={focusSeconds}
             targetMinutes={targetMinutes}
@@ -182,8 +182,8 @@ export const App: React.FC = () => {
             onDockTopRight={dockTopRight}
             isDocked={isDocked}
             onMinimizeToTaskbar={minimizeToTaskbar}
+            onExitApp={exitApp}
             onToggleAlwaysOnTop={toggleAlwaysOnTop}
-            onToggleMute={toggleMute}
             onToggleTimer={toggleTimer}
             onResetTimer={resetTimer}
             onAdjustMinutes={adjustTargetMinutes}
@@ -324,6 +324,8 @@ export const App: React.FC = () => {
           onCompleteActiveTask={completeActiveTask}
           onSelectViewMode={setViewMode}
           onOpenIde={handleOpenIde}
+          onMinimizeToTaskbar={minimizeToTaskbar}
+          onExitApp={exitApp}
           spotifyTrack={spotify.track}
           onSpotifyControl={spotify.controlPlayback}
         />

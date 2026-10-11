@@ -33,6 +33,7 @@ import { haptics } from '../audio/haptics';
 import { markProgrammaticWindowMove } from './useWindowMagnet';
 import { useSpotifyPlayer } from './useSpotifyPlayer';
 import { advanceActiveTaskFocus } from '../utils/taskTimer';
+import { applyWindowLayering, exitApplication } from '../utils/windowControls';
 
 const STORAGE_KEY_TASKS = 'workpulse_tasks_v3';
 const STORAGE_KEY_CONFIG = 'workpulse_config_v1';
@@ -541,6 +542,11 @@ export function useWorkpulseState() {
     })();
   }, [viewMode, hasFocusStrip]);
 
+  // Enforce ambient always-on-top in Dock and Focus modes; restore normal desktop layering in Board mode
+  useEffect(() => {
+    applyWindowLayering(viewMode, isAlwaysOnTop);
+  }, [viewMode, isAlwaysOnTop]);
+
   // Persist user-adjusted Board window dimensions and position when resized or dragged
   useEffect(() => {
     if (!isTauri()) return;
@@ -643,6 +649,15 @@ export function useWorkpulseState() {
     }
     haptics.snapClick();
   }, []);
+
+  const exitApp = useCallback(async () => {
+    haptics.snapClick();
+    await exitApplication(async () => {
+      for (const task of pendingTimerTasks.current.values()) {
+        persistTaskToDb(task);
+      }
+    });
+  }, [persistTaskToDb]);
 
   const toggleMute = useCallback(() => {
     setIsMuted((prev) => !prev);
@@ -993,6 +1008,7 @@ export function useWorkpulseState() {
     isExpanded,
     isAlwaysOnTop,
     minimizeToTaskbar,
+    exitApp,
     isMuted,
     isTimerRunning,
     focusSeconds,

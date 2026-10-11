@@ -31,7 +31,6 @@ interface ExpandedPanelProps {
   doneCount?: number;
   remainingCount?: number;
   isAlwaysOnTop: boolean;
-  isMuted: boolean;
   isTimerRunning: boolean;
   focusSeconds: number;
   targetMinutes: number;
@@ -40,8 +39,8 @@ interface ExpandedPanelProps {
   onDockTopRight?: () => void;
   isDocked?: boolean;
   onMinimizeToTaskbar?: () => void;
+  onExitApp?: () => void;
   onToggleAlwaysOnTop: () => void;
-  onToggleMute: () => void;
   onToggleTimer: () => void;
   onResetTimer: () => void;
   onAdjustMinutes: (delta: number) => void;
@@ -88,7 +87,6 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   timeline,
   completionPercentage,
   isAlwaysOnTop,
-  isMuted,
   isTimerRunning,
   focusSeconds,
   targetMinutes,
@@ -96,8 +94,8 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   onCollapse,
   onDockTopRight,
   onMinimizeToTaskbar,
+  onExitApp,
   onToggleAlwaysOnTop,
-  onToggleMute,
   onToggleTimer,
   onResetTimer,
   onAdjustMinutes,
@@ -301,7 +299,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
               {timeStr}
             </span>
 
-            {/* Hardware-Style Window Buttons: PIN, SND, − */}
+            {/* Window controls */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <button
                 onClick={onToggleAlwaysOnTop}
@@ -312,23 +310,26 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
                 PIN
               </button>
 
-              <button
-                onClick={onToggleMute}
-                className={`session-btn ${isMuted ? 'active' : ''}`}
-                style={{ padding: '2px 7px', fontSize: 11 }}
-                title={isMuted ? 'Sound muted' : 'Sound active'}
-              >
-                {isMuted ? 'MUTED' : 'SND'}
-              </button>
-
               {onMinimizeToTaskbar && (
                 <button
                   onClick={onMinimizeToTaskbar}
                   className="session-btn"
                   style={{ padding: '2px 7px', fontSize: 11 }}
                   title="Minimize window"
+                  aria-label="Minimize window"
                 >
                   −
+                </button>
+              )}
+              {onExitApp && (
+                <button
+                  onClick={onExitApp}
+                  className="session-btn"
+                  style={{ padding: '2px 7px', fontSize: 11 }}
+                  title="Exit application"
+                  aria-label="Exit application"
+                >
+                  ✕
                 </button>
               )}
             </div>
@@ -457,7 +458,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
         {/* Hairline Divider */}
         <div className="session-divider" style={{ flexShrink: 0 }} />
 
-        {/* Studio Console (3-Channel Rack) */}
+        {/* Studio Console (Agent Fleet and Screen Operator) */}
         <div style={{ flexShrink: 0 }}>
           <StudioConsole
             aiRun={aiRun}
@@ -472,12 +473,6 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
             onOperatorCapture={onOperatorCapture}
             onOperatorApprove={onOperatorApprove}
             onOperatorDeny={onOperatorDeny}
-            spotifyTrack={spotifyTrack}
-            isSpotifyConnected={isSpotifyConnected}
-            isSpotifyConnecting={isSpotifyConnecting}
-            onOpenSpotifySetup={onOpenSpotifySetup}
-            onSpotifyControl={onSpotifyControl}
-            onDetectSpotifyLocal={onDetectSpotifyLocal}
           />
         </div>
 
