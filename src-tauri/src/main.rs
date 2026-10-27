@@ -1,12 +1,17 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod db;
+mod fleet_watcher;
 mod operator;
 mod screen;
 mod server;
 mod watcher;
 mod spotify;
 mod windows_media;
+mod island;
+mod usage;
+#[cfg(test)]
+mod usage_tests;
 
 use db::{Database, TaskRecord, TimelineEventRecord};
 use std::sync::Mutex;
@@ -114,6 +119,14 @@ async fn spotify_start_login(client_id: String) -> Result<String, String> {
         let _ = std::process::Command::new("rundll32")
             .args(["url.dll,FileProtocolHandler", &auth_url])
             .spawn();
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open").arg(&auth_url).spawn().map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open").arg(&auth_url).spawn().map_err(|e| e.to_string())?;
     }
     Ok(auth_url)
 }
@@ -347,6 +360,14 @@ mod single_instance {
 }
 
 fn main() {
+    if let Some(code) = usage::export::headless_mode() { std::process::exit(code); }
+    if std::env::args().nth(1).as_deref() == Some("--usage-check") {
+        let result = tokio::runtime::Runtime::new().map_err(|_| "Could not start the usage runtime".to_string()).and_then(|runtime| runtime.block_on(usage::codex::probe_once()));
+        match result {
+            Ok(reading) => { println!("{}", serde_json::to_string(&reading).unwrap()); std::process::exit(0); },
+            Err(error) => { eprintln!("SESSION: {error}"); std::process::exit(2); },
+        }
+    }
     #[cfg(target_os = "windows")]
     if !single_instance::check_or_focus() {
         return;
@@ -369,6 +390,7 @@ fn main() {
 
             // Automatically watch Antigravity IDE transcript logs and broadcast real-time actions
             watcher::start_transcript_watcher(tx.clone());
+            fleet_watcher::start_fleet_watcher(tx.clone());
 
             if let Err(e) = server::start_server_with_screen(41789, tx, screen_for_server).await {
                 eprintln!("[WorkPulse] Server error: {}", e);
@@ -377,9 +399,15 @@ fn main() {
     });
 
     // 3. Build Tauri desktop application
-    tauri::Builder::default()
+    let application = tauri::Builder::default()
         .manage(state)
         .invoke_handler(tauri::generate_handler![
+            usage::service::get_usage_snapshot,
+            usage::service::connect_usage_provider,
+            usage::service::disconnect_usage_provider,
+            usage::service::refresh_usage,
+            island::present_session_surface,
+            island::zoom_board,
             get_tasks,
             save_task,
             remove_task,
@@ -399,6 +427,8 @@ fn main() {
             exit_app
         ])
         .setup(|app| {
+            island::create(app.handle())?;
+            app.manage(usage::service::UsageService::start(app.handle().clone())?);
             // Build Windows System Tray
             let show_i = MenuItem::with_id(app, "show", "Show / Hide SESSION", true, None::<&str>)?;
             let pin_i = MenuItem::with_id(app, "pin", "Always on Top", true, None::<&str>)?;
@@ -442,6 +472,11 @@ fn main() {
 
             Ok(())
         })
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .expect("error while running WorkPulse desktop application");
+    application.run(|app, event| {
+        if matches!(event, tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit) {
+            if let Some(service) = app.try_state::<usage::service::UsageService>() { service.shutdown(); }
+        }
+    });
 }

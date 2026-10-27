@@ -12,8 +12,8 @@ export interface MonitorBounds {
   height: number;
 }
 
-export const DEFAULT_BOARD_WIDTH = 1340;
-export const DEFAULT_BOARD_HEIGHT = 800;
+export const DEFAULT_BOARD_WIDTH = 1120;
+export const DEFAULT_BOARD_HEIGHT = 760;
 export const FOCUS_WIDTH = 420;
 export const FOCUS_HEIGHT = 280;
 /** Focus window height while the Spotify mini strip is visible (measured: 326 content + 4 air). */
@@ -23,6 +23,14 @@ export const DOCK_HEIGHT = 280;
 export const DOCK_MARGIN = 16;
 
 export const STORAGE_KEY_BOARD_GEOMETRY = 'session_board_geometry_v1';
+
+/** The caller supplies logical work-area bounds, excluding the menu bar and Dock. */
+export function getIslandGeometry(workArea: MonitorBounds | null, expanded: boolean, hasMusic: boolean) {
+  const area = workArea ?? { x: 0, y: 32, width: 1440, height: 868 };
+  const width = Math.min(expanded ? 400 : 320, Math.max(1, area.width - 16));
+  const height = Math.min(expanded ? (hasMusic ? 244 : 176) : 48, Math.max(1, area.height - 24));
+  return { x: Math.round(area.x + (area.width - width) / 2), y: Math.round(area.y + 12), width, height };
+}
 
 /**
  * Calculates centered window bounds for Board mode.

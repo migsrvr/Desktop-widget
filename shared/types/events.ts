@@ -84,7 +84,44 @@ export interface TimelineEvent {
 // Telemetry & WebSocket Protocol Messages
 // ---------------------------------------------------------------------------
 
+/** A provider-reported plan allowance. Never derive this from local active time. */
+export interface ProviderAllowance {
+  provider: 'codex' | 'claude' | 'gemini';
+  usedPercent: number;
+  resetAt: string | null;
+  observedAt: string;
+  plan?: string;
+  window?: string;
+}
+
+export type UsageProvider = 'codex' | 'claude' | 'gemini';
+export type UsageSource = 'codex-app-server' | 'claude-statusline' | 'antigravity-statusline';
+export type UsageConnectionState = 'not-connected' | 'waiting' | 'current' | 'stale' | 'error';
+
+export interface UsageWindow {
+  id: string;
+  label: string;
+  usedPercent: number | null;
+  remainingAmount: number | null;
+  unit: string | null;
+  resetAt: string | null;
+}
+
+export interface ProviderUsageSnapshot {
+  revision: number;
+  provider: UsageProvider;
+  source: UsageSource;
+  status: UsageConnectionState;
+  windows: UsageWindow[];
+  plan: string | null;
+  receivedAt: string | null;
+  detail: string | null;
+}
+
+export type UsageSnapshot = Record<UsageProvider, ProviderUsageSnapshot>;
+
 export type IdeToWidgetMessage =
+  | { type: 'usage/allowance'; payload: ProviderAllowance }
   | {
       type: 'ide/handshake';
       payload: { ideName: string; version: string; workspaceRoot: string };
@@ -170,6 +207,10 @@ export type IdeToWidgetMessage =
         isConnected: boolean;
         clientId: string;
       };
+    }
+  | {
+      type: 'fleet/status_update';
+      payload: FleetTelemetry;
     };
 
 export type WidgetToIdeMessage =
@@ -599,4 +640,84 @@ export function formatPomodoroDuration(elapsedSeconds: number, estimatedMinutes?
   }
   return '--';
 }
+
+// ---------------------------------------------------------------------------
+// Fleet Telemetry Contracts (Agent Manager)
+// ---------------------------------------------------------------------------
+
+export type FleetSessionStatus = 'working' | 'idle' | 'dead' | 'waiting_input' | string;
+
+export interface FleetSession {
+  id: string;
+  name: string;
+  role?: string;
+  tool: string;
+  status: FleetSessionStatus;
+  model?: string;
+  lastStatusAt?: number;
+}
+
+export interface FleetTelemetry {
+  groupName: string;
+  sessions: FleetSession[];
+  lastUpdated: string;
+}
+
+// ---------------------------------------------------------------------------
+// Quota & Rate Limit Contracts (Antigravity & OpenAI)
+// ---------------------------------------------------------------------------
+
+export type QuotaProvider = 'antigravity' | 'openai';
+
+export type QuotaColorState = 'normal' | 'warning' | 'critical';
+
+export interface ProviderQuotaState {
+  provider: QuotaProvider;
+  rollingWindowHours: number; // default: 5.0
+  rollingWindowStartedAt: string; // ISO timestamp
+  usedComputeSeconds: number; // Active compute seconds within current rolling window
+  maxComputeSeconds: number; // e.g. 5.0 * 3600 = 18000s
+  dailyUsedSeconds: number; // Accumulated usage for today
+  dailyMaxSeconds: number; // Configured daily cap
+  lastActiveSessionId?: string;
+}
+
+export interface QuotaTrackerState {
+  antigravity: ProviderQuotaState;
+  openai: ProviderQuotaState;
+  warningThresholdPercent: number; // default: 80%
+  criticalThresholdPercent: number; // default: 95%
+}
+
+/**
+ * Calculates visual color state for quota consumption.
+ * Normal: < 80% (monochrome/accent)
+ * Warning: 80% - 94% (amber)
+ * Critical: >= 95% (red)
+ */
+export function getQuotaColorState(
+  usedSeconds: number,
+  maxSeconds: number,
+  warningThreshold = 80,
+  criticalThreshold = 95
+): QuotaColorState {
+  if (!maxSeconds || maxSeconds <= 0) return 'normal';
+  const percentage = (usedSeconds / maxSeconds) * 100;
+  if (percentage >= criticalThreshold) return 'critical';
+  if (percentage >= warningThreshold) return 'warning';
+  return 'normal';
+}
+
+/**
+ * Formats seconds into rolling window countdown HH:MM:SS format.
+ * Example: 9910s -> "02:45:10"
+ */
+export function formatQuotaCountdown(remainingSeconds: number): string {
+  const safe = Math.max(0, Math.floor(remainingSeconds));
+  const hrs = Math.floor(safe / 3600);
+  const mins = Math.floor((safe % 3600) / 60);
+  const secs = safe % 60;
+  return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
 

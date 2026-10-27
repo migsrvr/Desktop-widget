@@ -32,6 +32,7 @@ import {
 import { haptics } from '../audio/haptics';
 import { markProgrammaticWindowMove } from './useWindowMagnet';
 import { useSpotifyPlayer } from './useSpotifyPlayer';
+import { useFleetTelemetry } from './useFleetTelemetry';
 import { advanceActiveTaskFocus } from '../utils/taskTimer';
 import { applyWindowLayering, exitApplication } from '../utils/windowControls';
 
@@ -48,29 +49,8 @@ export const getTodayDateStr = () => {
 
 const INITIAL_TASKS: Task[] = [];
 
-const INITIAL_AI_RUN: AiRun = {
-  id: 'live-gemini-opencode',
-  agentName: 'Gemini 3.8 Flash & OpenCode',
-  status: 'WORKING',
-  goal: 'Monitoring live tasks & agent runs',
-  currentStepDescription: 'Waiting for live agent telemetry…',
-  filesModifiedCount: 0,
-  modifiedFiles: [],
-  testStatus: 'NOT_RUN',
-  startedAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-};
-
-const INITIAL_TIMELINE: TimelineEvent[] = [
-  {
-    id: 'evt-init',
-    dayPlanDate: getTodayDateStr(),
-    eventType: 'AI_START',
-    summary: 'Dynamic telemetry bridge connected to Gemini & OpenCode',
-    timestamp: new Date().toISOString(),
-  },
-];
-
 export function useWorkpulseState() {
+  const { fleetTelemetry, fleetReceivedAt, setFleetTelemetry, quotaState, resetQuotaWindow, calibrateQuota, adjustQuotaLimit } = useFleetTelemetry();
   const [activeDate, setActiveDate] = useState<string>(getTodayDateStr);
 
   const [tasks, setTasks] = useState<Task[]>(() => {
@@ -105,8 +85,8 @@ export function useWorkpulseState() {
     };
   }, []);
 
-  const [aiRun, setAiRun] = useState<AiRun | null>(INITIAL_AI_RUN);
-  const [timeline, setTimeline] = useState<TimelineEvent[]>(INITIAL_TIMELINE);
+  const [aiRun, setAiRun] = useState<AiRun | null>(null);
+  const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
 
   const [viewMode, setViewModeState] = useState<ViewMode>(() => {
     try {
@@ -454,9 +434,9 @@ export function useWorkpulseState() {
   // Side flyout panel: Activity Log / Screen Operator extend to the LEFT
   // of the main column instead of stacking into one long widget.
   // (Spotify lives in the main column's right slot with its album art.)
-  const [sidePanel, setSidePanel] = useState<'activity' | 'operator' | null>(null);
+  const [sidePanel, setSidePanel] = useState<'activity' | 'operator' | 'quota' | null>(null);
 
-  const toggleSidePanel = useCallback((panel: 'activity' | 'operator') => {
+  const toggleSidePanel = useCallback((panel: 'activity' | 'operator' | 'quota') => {
     haptics.snapClick();
     setSidePanel((prev) => (prev === panel ? null : panel));
   }, []);
@@ -491,15 +471,10 @@ export function useWorkpulseState() {
     } catch {}
   }, []);
 
-  // Dynamically set window dimensions according to viewMode:
-  // - BOARD: ~1340x800, centered on the current monitor.
-  // - DOCK / FOCUS: 420x280 focus mode (420x330 while the Spotify strip
-  //   is up), docked to top-right of the current monitor.
-  // Strip visibility is a boolean so track polling never refires the resize.
-  const hasFocusStrip =
-    (viewMode === 'DOCK' || viewMode === 'FOCUS') && spotify.track != null;
+  // A separate native companion hosts the island. Track polling never resizes the board.
   useEffect(() => {
     if (!isTauri()) return;
+    if (viewMode !== 'BOARD') return;
 
     (async () => {
       try {
@@ -507,19 +482,9 @@ export function useWorkpulseState() {
         const [scale, mon] = await Promise.all([win.scaleFactor(), currentMonitor()]);
         let monBounds: MonitorBounds | null = null;
         if (mon) {
-          const mp = mon.position.toLogical(scale);
-          const ms = mon.size.toLogical(scale);
+          const mp = mon.workArea.position.toLogical(mon.scaleFactor);
+          const ms = mon.workArea.size.toLogical(mon.scaleFactor);
           monBounds = { x: mp.x, y: mp.y, width: ms.width, height: ms.height };
-        }
-
-        if (viewMode === 'DOCK' || viewMode === 'FOCUS') {
-          // Dock goes to the top-right corner of the monitor
-          const dockH = hasFocusStrip ? FOCUS_HEIGHT_SPOTIFY : FOCUS_HEIGHT;
-          const target = getFocusDockedGeometry(monBounds, FOCUS_WIDTH, dockH, 16);
-          markProgrammaticWindowMove();
-          await win.setSize(new LogicalSize(target.width, target.height));
-          await win.setPosition(new LogicalPosition(target.x, target.y));
-          return;
         }
 
         // BOARD mode: Centers back on the current monitor
@@ -534,17 +499,14 @@ export function useWorkpulseState() {
         await win.setSize(new LogicalSize(target.width, target.height));
         await win.setPosition(new LogicalPosition(target.x, target.y));
       } catch {
-        const isDock = viewMode === 'DOCK' || viewMode === 'FOCUS';
-        const targetH = isDock ? (hasFocusStrip ? FOCUS_HEIGHT_SPOTIFY : FOCUS_HEIGHT) : DEFAULT_BOARD_HEIGHT;
-        const targetW = isDock ? FOCUS_WIDTH : DEFAULT_BOARD_WIDTH;
-        invoke('set_widget_size', { width: targetW, height: targetH }).catch(() => {});
+        invoke('set_widget_size', { width: DEFAULT_BOARD_WIDTH, height: DEFAULT_BOARD_HEIGHT }).catch(() => {});
       }
     })();
-  }, [viewMode, hasFocusStrip]);
+  }, [viewMode]);
 
   // Enforce ambient always-on-top in Dock and Focus modes; restore normal desktop layering in Board mode
   useEffect(() => {
-    applyWindowLayering(viewMode, isAlwaysOnTop);
+    applyWindowLayering('BOARD', isAlwaysOnTop);
   }, [viewMode, isAlwaysOnTop]);
 
   // Persist user-adjusted Board window dimensions and position when resized or dragged
@@ -686,6 +648,10 @@ export function useWorkpulseState() {
   // Process incoming telemetry from IDE extension
   const handleIncomingIdeMessage = useCallback((msg: IdeToWidgetMessage) => {
     switch (msg.type) {
+      case 'fleet/status_update': {
+        setFleetTelemetry(msg.payload);
+        break;
+      }
       case 'ai/run_started': {
         setAiRun({
           id: msg.payload.runId,
@@ -963,7 +929,7 @@ export function useWorkpulseState() {
         break;
       }
     }
-  }, [addTask, spotify]);
+  }, [addTask, spotify, setFleetTelemetry]);
 
   const clearPastCompletedTasks = useCallback(() => {
     const currentToday = getTodayDateStr();
@@ -996,6 +962,12 @@ export function useWorkpulseState() {
 
   return {
     activeDate,
+    fleetTelemetry,
+    fleetReceivedAt,
+    quotaState,
+    resetQuotaWindow,
+    calibrateQuota,
+    adjustQuotaLimit,
     tasks,
     todaysTasks,
     pastCompletedTasks,

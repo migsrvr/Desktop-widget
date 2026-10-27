@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useId, useRef, useState } from 'react';
 import {
   Task,
   TaskStatus,
@@ -11,6 +11,9 @@ import {
   VisionInference,
   OperatorActionProposal,
   ViewMode,
+  FleetTelemetry,
+  QuotaTrackerState,
+  QuotaProvider,
 } from '@workpulse/shared';
 import { TaskList } from './TaskList';
 import { CurrentSessionBanner } from './CurrentSessionBanner';
@@ -19,6 +22,8 @@ import { TransportBar } from './TransportBar';
 import { TimelineView } from './TimelineView';
 import { SpotifyPlayerCard } from './SpotifyPlayerCard';
 import { OperatorCard } from './OperatorCard';
+import { QuotaMonitorCard } from './QuotaMonitorCard';
+import { getProviderQuotaSummary } from '../utils/quotaCalculator';
 
 interface ExpandedPanelProps {
   tasks: Task[];
@@ -26,6 +31,11 @@ interface ExpandedPanelProps {
   pastCompletedTasks?: Task[];
   activeTask: Task | null;
   aiRun: AiRun | null;
+  fleetTelemetry?: FleetTelemetry | null;
+  fleetReceivedAt?: number | null;
+  quotaState?: QuotaTrackerState;
+  onResetQuotaWindow?: (provider?: QuotaProvider) => void;
+  onAdjustQuotaLimit?: (provider: QuotaProvider, hours: number) => void;
   timeline: TimelineEvent[];
   completionPercentage: number;
   doneCount?: number;
@@ -55,8 +65,8 @@ interface ExpandedPanelProps {
   onSelectViewMode?: (mode: ViewMode) => void;
   onOpenIde?: () => void;
   isBridgeConnected?: boolean;
-  sidePanel?: 'activity' | 'operator' | null;
-  onToggleSidePanel?: (panel: 'activity' | 'operator') => void;
+  sidePanel?: 'activity' | 'operator' | 'quota' | null;
+  onToggleSidePanel?: (panel: 'activity' | 'operator' | 'quota') => void;
   onCloseSidePanel?: () => void;
   spotifyTrack?: SpotifyTrack | null;
   isSpotifyConnected?: boolean;
@@ -84,6 +94,11 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   pastCompletedTasks = [],
   activeTask,
   aiRun,
+  fleetTelemetry = null,
+  fleetReceivedAt,
+  quotaState,
+  onResetQuotaWindow,
+  onAdjustQuotaLimit,
   timeline,
   completionPercentage,
   isAlwaysOnTop,
@@ -132,6 +147,21 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   onOperatorDeny,
 }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [quotaProvider, setQuotaProvider] = useState<QuotaProvider>('antigravity');
+  const quotaPanelId = useId();
+  const quotaButtonRef = useRef<HTMLButtonElement>(null);
+  const quotaPanelRef = useRef<HTMLDivElement>(null);
+  const previousSidePanel = useRef(sidePanel);
+  React.useEffect(() => {
+    if (sidePanel === 'quota') quotaPanelRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    else if (previousSidePanel.current === 'quota') quotaButtonRef.current?.focus();
+    previousSidePanel.current = sidePanel;
+  }, [sidePanel]);
+  const headerQuota = quotaState?.[quotaProvider];
+  const quotaColor = quotaState && headerQuota
+    ? getProviderQuotaSummary(headerQuota, currentTime.getTime(), quotaState.warningThresholdPercent, quotaState.criticalThresholdPercent).visualColor
+    : undefined;
+
 
   React.useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -150,6 +180,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
     <div
       style={{
         display: 'flex',
+        position: 'relative',
         flexDirection: 'row',
         gap: 8,
         alignItems: 'stretch',
@@ -162,7 +193,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
       }}
     >
       {/* Optional Flyout for detailed Spotify setup or Screen Operator camera feed */}
-      {sidePanel && (
+      {sidePanel && sidePanel !== 'quota' && (
         <div
           className="session-panel-card"
           style={{
@@ -218,6 +249,35 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
         </div>
       )}
 
+      {sidePanel === 'quota' && (
+        <div
+          role="region"
+          aria-label="Quota monitor"
+          id={quotaPanelId}
+          ref={quotaPanelRef}
+          onKeyDown={(event) => { if (event.key === 'Escape') { event.stopPropagation(); onCloseSidePanel?.(); } }}
+          style={{ position: 'absolute', right: 8, top: 60, bottom: 8, width: 320, maxWidth: '100%', overflowY: 'auto', zIndex: 5 }}
+        >
+          {quotaState ? <>
+            <QuotaMonitorCard
+              quota={quotaState}
+              onClose={onCloseSidePanel}
+              onResetWindow={onResetQuotaWindow}
+              onAdjustLimit={onAdjustQuotaLimit}
+              selectedProvider={quotaProvider}
+              onSelectProvider={setQuotaProvider}
+              nowMs={currentTime.getTime()}
+            />
+            <div style={{ padding: '8px 12px', background: 'var(--session-surface)', fontSize: 10, color: 'var(--session-text-secondary)' }}>
+              Local active-time estimate · {quotaProvider === 'antigravity' ? 'Antigravity' : 'OpenAI'} daily usage: {(quotaState[quotaProvider].dailyUsedSeconds / 3600).toFixed(2)}h / {(quotaState[quotaProvider].dailyMaxSeconds / 3600).toFixed(1)}h
+            </div>
+          </> : <div className="session-panel-card" style={{ padding: 12 }}>
+            Quota estimate unavailable.
+            <button type="button" className="session-btn" onClick={onCloseSidePanel} aria-label="Close quota monitor">✕</button>
+          </div>}
+        </div>
+      )}
+
       {/* Main Board Console — Fills full window */}
       <div
         className="session-window-frame"
@@ -246,6 +306,8 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
             cursor: 'grab',
             userSelect: 'none',
             flexShrink: 0,
+            flexWrap: 'wrap',
+            gap: 8,
           }}
         >
           {/* SESSION / CONTROL BOARD Branding */}
@@ -286,6 +348,22 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
               gap: 10,
             }}
           >
+            <button
+              ref={quotaButtonRef}
+              type="button"
+              className={`session-btn${sidePanel === 'quota' ? ' active' : ''}`}
+              onClick={() => onToggleSidePanel?.('quota')}
+              aria-expanded={sidePanel === 'quota'}
+              aria-controls={quotaPanelId}
+              aria-label="Open quota monitor"
+              title={`${quotaProvider === 'antigravity' ? 'Antigravity' : 'OpenAI'} local active-time estimate in 5-hour windows`}
+              style={{ padding: '2px 7px', fontSize: 10, color: quotaColor, textAlign: 'left' }}
+            >
+              {headerQuota
+                ? `⚡ ${(headerQuota.usedComputeSeconds / 3600).toFixed(1)}h / ${(headerQuota.maxComputeSeconds / 3600).toFixed(1)}h`
+                : '⚡ QUOTA'}
+            </button>
+
             {/* Real-Time Clock: 17:35:19 */}
             <span
               className="session-mono"
@@ -462,6 +540,8 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
         <div style={{ flexShrink: 0 }}>
           <StudioConsole
             aiRun={aiRun}
+            fleetTelemetry={fleetTelemetry}
+            fleetReceivedAt={fleetReceivedAt}
             timeline={timeline}
             operatorWatching={operatorWatching}
             operatorMode={operatorMode}

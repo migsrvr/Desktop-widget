@@ -1,0 +1,166 @@
+{
+  "date": "2026-10-26",
+  "fileKey": "m4repQN9EdKQgGPtJlwk9v",
+  "fileUrl": "https://www.figma.com/design/m4repQN9EdKQgGPtJlwk9v?node-id=10-299",
+  "sessionId": "9bf40af7-7ac8-4e6f-b377-64f116634b7b",
+  "scope": "Monochrome dark board and island states",
+  "createdNodeIds": [],
+  "createdVariableIds": [
+    "VariableID:16:223",
+    "VariableID:16:224",
+    "VariableID:16:225",
+    "VariableID:16:226",
+    "VariableID:16:227",
+    "VariableID:16:228",
+    "VariableID:16:229",
+    "VariableID:16:230",
+    "VariableID:16:231",
+    "VariableID:16:232",
+    "VariableID:16:233",
+    "VariableID:16:234",
+    "VariableID:16:235"
+  ],
+  "mutatedNodeIds": [
+    "7:189",
+    "7:192",
+    "7:191",
+    "7:196",
+    "7:204",
+    "7:226"
+  ],
+  "mutatedVariableIds": [
+    "VariableID:7:20",
+    "VariableID:7:21",
+    "VariableID:7:22",
+    "VariableID:7:23",
+    "VariableID:7:24",
+    "VariableID:7:25",
+    "VariableID:7:26",
+    "VariableID:7:29",
+    "VariableID:7:31",
+    "VariableID:7:34",
+    "VariableID:7:37",
+    "VariableID:7:40",
+    "VariableID:7:42",
+    "VariableID:7:46",
+    "VariableID:7:49",
+    "VariableID:7:52",
+    "VariableID:7:54",
+    "VariableID:16:235"
+  ],
+  "mutatedStyleIds": [
+    "S:3d6ca20770e908642d29be150e0a3692e081c51f,"
+  ],
+  "collectionId": "VariableCollectionId:7:19",
+  "mode": "Dark",
+  "palette": {
+    "surface/main": "#141414",
+    "text/primary": "#F2F2F2",
+    "text/secondary": "#A6A6A6",
+    "accent": "#F2F2F2",
+    "white": "#FFFFFF",
+    "separator": "#FFFFFF1A",
+    "surface/sidebar": "#1C1C1C",
+    "surface/toolbar": "#1E1E1E",
+    "surface/player": "#1C1C1C",
+    "surface/focus": "#242424",
+    "surface/selected": "#333333",
+    "surface/island": "#111111",
+    "surface/island-button": "#333333",
+    "status/green": "#BFBFBF",
+    "status/amber": "#F2F2F2",
+    "text/island-secondary": "#AAAAAA",
+    "island/border": "#FFFFFF20"
+  },
+  "onAccentId": "VariableID:16:235",
+  "islandVariantIds": [
+    "7:196",
+    "7:204",
+    "7:226"
+  ],
+  "primaryButton": {
+    "id": "7:189",
+    "fills": [
+      {
+        "type": "SOLID",
+        "visible": true,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "color": {
+          "r": 0,
+          "g": 0.5333333611488342,
+          "b": 1
+        },
+        "boundVariables": {
+          "color": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:7:23"
+          }
+        }
+      }
+    ],
+    "labelFills": [
+      {
+        "type": "SOLID",
+        "visible": true,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1
+        },
+        "boundVariables": {
+          "color": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:16:235"
+          }
+        }
+      }
+    ],
+    "nativeBackgroundVisible": false
+  },
+  "lightModePreserved": true,
+  "verification": {
+    "mutatedNodeIds": [
+      "I10:318;4341:2501",
+      "I10:375;4341:2501"
+    ],
+    "checks": [
+      {
+        "id": "10:299",
+        "name": "Board / Dark · Monochrome",
+        "paintCount": 118,
+        "nonNeutralColors": []
+      },
+      {
+        "id": "10:236",
+        "name": "Island / Compact",
+        "paintCount": 7,
+        "nonNeutralColors": []
+      },
+      {
+        "id": "10:249",
+        "name": "Island / Expanded",
+        "paintCount": 13,
+        "nonNeutralColors": []
+      },
+      {
+        "id": "10:280",
+        "name": "Island / Attention",
+        "paintCount": 8,
+        "nonNeutralColors": []
+      },
+      {
+        "id": "10:229",
+        "name": "Desktop / compact island",
+        "paintCount": 13,
+        "nonNeutralColors": []
+      }
+    ],
+    "zeroWidthText": [],
+    "boardId": "10:299",
+    "islandSectionId": "10:227",
+    "visualReview": "Dark board and all three island states inspected; text is visible and no visible UI paint is chromatic."
+  }
+}

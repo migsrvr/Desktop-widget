@@ -13,6 +13,11 @@ export function useWebSocketBridge({
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
+  const onMessageRef = useRef(onMessage);
+
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
 
   useEffect(() => {
     let unmounted = false;
@@ -32,7 +37,7 @@ export function useWebSocketBridge({
           try {
             const data = JSON.parse(event.data) as IdeToWidgetMessage;
             if (data && data.type) {
-              onMessage(data);
+              onMessageRef.current(data);
             }
           } catch (err) {
             console.error('Failed to parse WebSocket message', err);
@@ -67,7 +72,7 @@ export function useWebSocketBridge({
         socketRef.current.close();
       }
     };
-  }, [url, onMessage]);
+  }, [url]);
 
   const sendMessage = (msg: WidgetToIdeMessage) => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {

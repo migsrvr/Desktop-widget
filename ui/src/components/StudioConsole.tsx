@@ -1,6 +1,7 @@
-import React, { useId, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import {
   AiRun,
+  FleetTelemetry,
   TimelineEvent,
   ScreenMode,
   ScreenFrameMeta,
@@ -8,7 +9,11 @@ import {
   OperatorActionProposal,
 } from '@workpulse/shared';
 
+import { fleetStatusElapsed, fleetStatusLabel, isFleetFresh, isFleetSessionWorking } from '../utils/fleetTelemetry';
+
 interface StudioConsoleProps {
+  fleetTelemetry?: FleetTelemetry | null;
+  fleetReceivedAt?: number | null;
   aiRun: AiRun | null;
   timeline?: TimelineEvent[];
   operatorWatching?: boolean;
@@ -25,14 +30,33 @@ interface StudioConsoleProps {
 
 type Channel = 'agent' | 'screen';
 
-const configuredRoles = [
-  { name: 'Gemini Planner', role: 'Overall Planner & PM' },
-  { name: 'Codex Senior', role: 'Engineering Lead & Subagent Coordinator' },
-  { name: 'Muse Junior', role: 'Independent Worker' },
-];
+export const FleetSessionCards: React.FC<{ fleetTelemetry: FleetTelemetry | null; now?: number; receivedAt?: number | null }> = ({ fleetTelemetry, now = Date.now(), receivedAt }) => {
+  const fresh = isFleetFresh(fleetTelemetry, now, receivedAt);
+  if (!fleetTelemetry) return <div style={{ fontSize: 11 }}>Fleet telemetry unavailable. Waiting for a fleet update.</div>;
+  if (fleetTelemetry.sessions.length === 0) return <div style={{ fontSize: 11 }}>{fresh ? 'No active sessions reported.' : 'Fleet telemetry unavailable. Last update is stale.'}</div>;
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: 6 }}>
+      {fleetTelemetry.sessions.map((session) => (
+        <div key={session.id} style={{ padding: '7px 8px', border: '1px solid var(--session-border)', borderRadius: 'var(--radius-sm)', overflowWrap: 'anywhere', minWidth: 0 }}>
+          <div style={{ fontSize: 12, fontWeight: 600 }}>{session.name || session.tool || session.id}</div>
+          <div className="session-mono" style={{ fontSize: 10 }}>#{session.id} · {session.tool || 'Tool unavailable'}</div>
+          {session.role && <div style={{ fontSize: 10 }}>{session.role}</div>}
+          <div style={{ fontSize: 10, marginTop: 3 }}>Model: {session.model || 'Not reported'}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3, fontSize: 11 }}>
+            {fresh && isFleetSessionWorking(session) && <span aria-hidden="true" className="fleet-breathing-dot" />}
+            <span>{fresh ? fleetStatusLabel(session) : 'Telemetry unavailable'}</span>
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--session-text-secondary)', marginTop: 3 }}>{fleetStatusElapsed(session, now)}</div>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 export const StudioConsole: React.FC<StudioConsoleProps> = ({
   aiRun,
+  fleetTelemetry = null,
+  fleetReceivedAt,
   operatorWatching = false,
   operatorMode = 'MONITOR',
   operatorFrame,
@@ -45,6 +69,16 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
 }) => {
   const [activeChannelDetail, setActiveChannelDetail] = useState<Channel | null>(null);
   const drawerId = useId();
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const fleetFresh = isFleetFresh(fleetTelemetry, now, fleetReceivedAt);
+  const sessions = fleetTelemetry?.sessions ?? [];
+  const workingCount = fleetFresh ? sessions.filter(isFleetSessionWorking).length : 0;
+  const standbyCount = fleetFresh ? sessions.filter((session) => session.status === 'idle').length : 0;
+  const fleetSummary = !fleetTelemetry || !fleetFresh ? 'Telemetry unavailable' : sessions.length === 0 ? 'No active sessions' : `${workingCount} Working · ${standbyCount} Standby`;
   const agentButton = useRef<HTMLButtonElement>(null);
   const screenButton = useRef<HTMLButtonElement>(null);
   const statusLabels: Record<AiRun['status'], string> = {
@@ -58,7 +92,6 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
     CANCELLED: 'Cancelled',
   };
   const agentStatusText = aiRun ? statusLabels[aiRun.status] : 'Standby';
-  const isAgentWorking = aiRun?.status === 'PLANNING' || aiRun?.status === 'WORKING' || aiRun?.status === 'RUNNING_TOOLS';
   const screenStatusText = !operatorWatching ? 'Standby'
     : operatorMode === 'OPERATOR' ? 'Operator'
     : operatorMode === 'ON_DEMAND' ? 'On-demand' : 'Monitoring';
@@ -94,17 +127,20 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
           aria-controls={drawerId}
           style={{ ...channelStyle, borderRight: '1px solid var(--session-border)', backgroundColor: activeChannelDetail === 'agent' ? 'var(--session-surface-active)' : 'transparent' }}
         >
-          <span className="session-mono" style={metaStyle}>01 / AGENT FLEET</span>
-          <span className="session-mono" style={{ ...metaStyle, fontSize: 9, fontWeight: 500 }}>AGENT MANAGER</span>
-          <span style={{ fontSize: 13, fontWeight: 600 }}>Gemini Planner → Codex Senior</span>
-          {aiRun && <span style={{ fontSize: 11, overflowWrap: 'anywhere' }}>Current run · {aiRun.agentName}</span>}
+          <span className="session-mono" style={metaStyle}>01 / AGENT FLEET ({fleetSummary})</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {isAgentWorking && <span aria-hidden="true" className="fleet-breathing-dot" />}
-            <span className="session-mono" style={{ fontSize: 11, color: isAgentWorking ? '#FFFFFF' : 'var(--session-text-secondary)' }}>{agentStatusText}</span>
+            {workingCount > 0 && <span aria-hidden="true" className="fleet-breathing-dot" />}
+            <span style={{ fontSize: 12, overflowWrap: 'anywhere' }}>{fleetTelemetry?.groupName || 'Live sessions'}</span>
           </span>
-          <span className="session-mono" style={{ fontSize: 10, color: 'var(--session-text-secondary)' }}>
-            Configured workflow · 3 Sessions (Planner · Lead · Worker)
+          <span style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {sessions.map((session) => (
+              <span key={session.id} aria-label={`${session.name || session.tool || session.id} · ${fleetFresh ? fleetStatusLabel(session) : 'Telemetry unavailable'}`} title={`${session.tool} · ${fleetFresh ? fleetStatusLabel(session) : 'Telemetry unavailable'}`} style={{ fontSize: 10, border: '1px solid var(--session-border)', borderRadius: 'var(--radius-sm)', padding: '2px 4px', overflowWrap: 'anywhere' }}>
+                <span aria-hidden="true">{fleetFresh && isFleetSessionWorking(session) ? '●' : '○'}</span> {session.name || session.tool || session.id}
+
+              </span>
+            ))}
           </span>
+          {aiRun && <span style={{ fontSize: 11, overflowWrap: 'anywhere' }}>Current run · {aiRun.agentName} · {agentStatusText}</span>}
         </button>
         <button
           ref={screenButton}
@@ -144,15 +180,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
           </div>
           {activeChannelDetail === 'agent' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div className="session-mono" style={{ fontSize: 10, color: 'var(--session-text-secondary)' }}>Configured workflow roles</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 6 }}>
-                {configuredRoles.map(({ name, role }) => (
-                  <div key={name} style={{ padding: '7px 8px', border: '1px solid var(--session-border)', borderRadius: 'var(--radius-sm)' }}>
-                    <div style={{ fontSize: 12, fontWeight: 600 }}>{name}</div>
-                    <div style={{ fontSize: 10, lineHeight: 1.4, color: 'var(--session-text-secondary)', marginTop: 3 }}>{role}</div>
-                  </div>
-                ))}
-              </div>
+              <FleetSessionCards fleetTelemetry={fleetTelemetry} now={now} receivedAt={fleetReceivedAt} />
               {aiRun ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5, fontSize: 11, overflowWrap: 'anywhere' }}>
                   <div>Current run: {aiRun.agentName} · {agentStatusText}</div>
@@ -170,7 +198,7 @@ export const StudioConsole: React.FC<StudioConsoleProps> = ({
                   )}
                   {aiRun.summary && <div>Summary: {aiRun.summary}</div>}
                 </div>
-              ) : <div style={{ fontSize: 11, color: 'var(--session-text-secondary)' }}>No agent run reported. Workflow roles are configured; live session activity is unavailable.</div>}
+              ) : <div style={{ fontSize: 11, color: 'var(--session-text-secondary)' }}>No agent run reported.</div>}
             </div>
           )}
           {/* SCREEN DETAIL DRAWER */}

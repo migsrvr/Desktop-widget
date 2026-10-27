@@ -29,6 +29,7 @@ import {
   groupPastCompletedTasksByDate,
   formatPastDateLabel,
   formatPomodoroDuration,
+  FleetTelemetry,
 } from './events';
 
 describe('Domain Models & Invariants', () => {
@@ -221,6 +222,36 @@ describe('Domain Models & Invariants', () => {
     if (parsed.type === 'ide/handshake') {
       expect(parsed.payload.ideName).toBe('VS Code');
     }
+  });
+
+  it('serializes fleet/status_update using camelCase and normalized millisecond status timestamps', () => {
+    const payload: FleetTelemetry = {
+      groupName: 'Work Window Haptics',
+      sessions: [
+        { id: 'live-1', name: 'Actual agent', tool: 'codex', status: 'working', model: 'gpt-6.1-sol', lastStatusAt: 1791701354685 },
+        { id: 'idle-1', name: 'Idle agent', tool: 'antigravity', status: 'idle' },
+        { id: 'future-1', name: 'Other agent', tool: 'unknown-tool', status: 'new_status' },
+      ],
+      lastUpdated: '2026-10-11T14:00:00.000Z',
+    };
+    const message: IdeToWidgetMessage = { type: 'fleet/status_update', payload };
+    const parsed = JSON.parse(JSON.stringify(message)) as IdeToWidgetMessage;
+    expect(parsed).toEqual(message);
+    if (parsed.type !== 'fleet/status_update') throw new Error('Unexpected message type');
+    expect(parsed.payload.sessions[0].lastStatusAt).toBe(1791701354685);
+    expect(Number.isSafeInteger(parsed.payload.sessions[0].lastStatusAt)).toBe(true);
+    expect(new Date(parsed.payload.sessions[0].lastStatusAt!).getUTCFullYear()).toBe(2026);
+    expect(parsed.payload.sessions[1]).not.toHaveProperty('model');
+    expect(parsed.payload.sessions[1]).not.toHaveProperty('lastStatusAt');
+    expect(Date.parse(parsed.payload.lastUpdated)).toBe(Date.parse('2026-10-11T14:00:00Z'));
+  });
+
+  it('preserves a successful empty fleet heartbeat as distinct from unavailable telemetry', () => {
+    const message: IdeToWidgetMessage = {
+      type: 'fleet/status_update',
+      payload: { groupName: '', sessions: [], lastUpdated: '2026-10-11T14:00:00.000Z' },
+    };
+    expect(JSON.parse(JSON.stringify(message))).toEqual(message);
   });
 
   it('formats track duration and validates Spotify playback actions', () => {

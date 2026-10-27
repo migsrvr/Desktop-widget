@@ -13,10 +13,10 @@
     "windows": [
       {
         "title": "SESSION",
-        "width": 1340,
-        "height": 800,
-        "minWidth": 320,
-        "minHeight": 48,
+        "width": 1120,
+        "height": 760,
+        "minWidth": 640,
+        "minHeight": 480,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": false,
