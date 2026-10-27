@@ -8,6 +8,8 @@ export interface MusicProps {
   error?: string | null;
   onControl: (action: SpotifyPlaybackAction) => void;
   onSetup: () => void;
+  /** Spotify playback is native-only; the web build shows a static note instead of inactive controls. */
+  desktopOnly?: boolean;
 }
 
 export function MusicControls({ track, onControl }: Pick<MusicProps, 'track' | 'onControl'>) {
@@ -18,17 +20,23 @@ export function MusicControls({ track, onControl }: Pick<MusicProps, 'track' | '
   </div>;
 }
 
-export function SessionMusic({ track, connected, error, onControl, onSetup }: MusicProps) {
+export function SessionMusic({ track, connected, error, onControl, onSetup, desktopOnly }: MusicProps) {
   const [expanded, setExpanded] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!expanded) return;
+    if (!expanded || desktopOnly) return;
     const close = (event: PointerEvent) => { if (!playerRef.current?.contains(event.target as Node)) setExpanded(false); };
     const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') setExpanded(false); };
     window.addEventListener('pointerdown', close);
     window.addEventListener('keydown', escape);
     return () => { window.removeEventListener('pointerdown', close); window.removeEventListener('keydown', escape); };
-  }, [expanded]);
+  }, [expanded, desktopOnly]);
+  if (desktopOnly) return <div className="session-music">
+    <div className="track-summary" role="note">
+      <span className="music-art"><Music2 size={18} /></span>
+      <span className="track-copy"><strong>Spotify</strong><span>Available in the desktop app</span></span>
+    </div>
+  </div>;
   const progress = track?.durationMs ? Math.max(0, Math.min(100, track.progressMs / track.durationMs * 100)) : 0;
   return <div className="session-music" ref={playerRef}>
     {expanded && <section className="music-popover" aria-label="Spotify player">

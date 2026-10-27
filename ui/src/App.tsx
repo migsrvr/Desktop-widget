@@ -31,7 +31,8 @@ function MainApplication() {
     // Preserve the existing bridge integration without exposing agent/file feeds.
     stateMessageRef.current(message);
   }, []);
-  const { isConnected, sendMessage } = useWebSocketBridge({ onMessage: onBridgeMessage });
+  // The local IDE bridge only exists alongside the desktop app; the public website never dials localhost.
+  const { isConnected, sendMessage } = useWebSocketBridge({ onMessage: onBridgeMessage, enabled: isTauri() });
   const snapshot = useMemo<IslandSnapshot>(() => ({
     activeTask: session.activeTask,
     remainingSeconds: getSessionCountdown(session.activeTask, session.focusSeconds, session.targetMinutes),
@@ -55,11 +56,11 @@ function MainApplication() {
   const native = isTauri();
   return <>
     {native || session.viewMode === 'BOARD' ? <SessionBoard session={session} page={page} onPage={setPage} providers={providers} usageControls={usageControls} now={now} bridgeConnected={isConnected}
-      onSpotifySetup={() => setSpotifySetup(true)} onZoom={() => { if (native) void invoke('zoom_board'); }}
+      onSpotifySetup={() => { if (native) setSpotifySetup(true); }} onZoom={() => { if (native) void invoke('zoom_board'); }}
       onOpenEditor={() => { if (session.activeTask) sendMessage({ type: 'widget/open_task_in_ide', payload: { taskId: session.activeTask.id, taskTitle: session.activeTask.title } }); }} />
       : <div className="island-surface browser-island"><SessionIsland snapshot={snapshot} onAction={handleIslandAction} onLayout={previewLayout} /></div>}
     {surfaceError && <div className="surface-error" role="alert">{surfaceError}<button className="text-button" onClick={() => session.setViewMode('BOARD')}>Return to board</button></div>}
-    <SpotifySetupModal isOpen={spotifySetup} onClose={() => setSpotifySetup(false)} isConnected={session.spotify.authStatus.isConnected} activeClientId={session.spotify.authStatus.clientId} accountType={session.spotify.authStatus.accountType} track={session.spotify.track} isConnecting={session.spotify.isConnecting} error={session.spotify.error} onConnect={session.spotify.startAuth} onDisconnect={session.spotify.disconnect} onDetectLocal={session.spotify.detectLocal} />
+    <SpotifySetupModal isOpen={native && spotifySetup} onClose={() => setSpotifySetup(false)} isConnected={session.spotify.authStatus.isConnected} activeClientId={session.spotify.authStatus.clientId} accountType={session.spotify.authStatus.accountType} track={session.spotify.track} isConnecting={session.spotify.isConnecting} error={session.spotify.error} onConnect={session.spotify.startAuth} onDisconnect={session.spotify.disconnect} onDetectLocal={session.spotify.detectLocal} />
   </>;
 }
 

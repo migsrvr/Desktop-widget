@@ -4,11 +4,14 @@ import { IdeToWidgetMessage, WidgetToIdeMessage } from '@workpulse/shared';
 interface UseWebSocketBridgeProps {
   onMessage: (msg: IdeToWidgetMessage) => void;
   url?: string;
+  /** When false no socket is opened, e.g. on the public website where no local bridge exists. */
+  enabled?: boolean;
 }
 
 export function useWebSocketBridge({
   onMessage,
   url = 'ws://127.0.0.1:41789/ws',
+  enabled = true,
 }: UseWebSocketBridgeProps) {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const socketRef = useRef<WebSocket | null>(null);
@@ -20,6 +23,7 @@ export function useWebSocketBridge({
   }, [onMessage]);
 
   useEffect(() => {
+    if (!enabled) return;
     let unmounted = false;
 
     function connect() {
@@ -72,7 +76,7 @@ export function useWebSocketBridge({
         socketRef.current.close();
       }
     };
-  }, [url]);
+  }, [url, enabled]);
 
   const sendMessage = (msg: WidgetToIdeMessage) => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {

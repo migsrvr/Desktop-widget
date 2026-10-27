@@ -33,7 +33,8 @@ import { haptics } from '../audio/haptics';
 import { markProgrammaticWindowMove } from './useWindowMagnet';
 import { useSpotifyPlayer } from './useSpotifyPlayer';
 import { useFleetTelemetry } from './useFleetTelemetry';
-import { advanceActiveTaskFocus } from '../utils/taskTimer';
+import { advanceActiveTaskFocus, settleElapsed } from '../utils/taskTimer';
+import { readStorage, writeStorage } from '../utils/safeStorage';
 import { applyWindowLayering, exitApplication } from '../utils/windowControls';
 
 const STORAGE_KEY_TASKS = 'workpulse_tasks_v3';
@@ -116,17 +117,23 @@ export function useWorkpulseState() {
   // Spotify integration
   const spotify = useSpotifyPlayer();
 
+  // Set when a task or focus write fails, so the board can explain changes will not persist.
+  const [persistenceError, setPersistenceError] = useState(false);
+  const lastActiveDateRef = useRef<string | null>(null);
+
   // Check for date rollover (e.g. crossing midnight or opening on a new day)
   useEffect(() => {
     const checkDateRollover = () => {
       const currentToday = getTodayDateStr();
-      const lastActiveDate = localStorage.getItem('workpulse_last_active_date');
+      // Without storage, fall back to the in-memory date so rollover still works this session.
+      const lastActiveDate = readStorage('workpulse_last_active_date') ?? lastActiveDateRef.current;
+      lastActiveDateRef.current = currentToday;
 
       if (!lastActiveDate) {
-        localStorage.setItem('workpulse_last_active_date', currentToday);
+        writeStorage('workpulse_last_active_date', currentToday);
       } else if (lastActiveDate !== currentToday) {
         // A new day has arrived!
-        localStorage.setItem('workpulse_last_active_date', currentToday);
+        writeStorage('workpulse_last_active_date', currentToday);
         setActiveDate(currentToday);
 
         // Rollover: update any pending (uncompleted) tasks to today
@@ -168,27 +175,31 @@ export function useWorkpulseState() {
 
   // Save tasks to local storage
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(tasks));
-    } catch {}
+    if (!writeStorage(STORAGE_KEY_TASKS, JSON.stringify(tasks))) setPersistenceError(true);
   }, [tasks]);
 
   // Persist daily focus timer
   useEffect(() => {
-    try {
-      const today = getTodayDateStr();
-      localStorage.setItem(`workpulse_focus_seconds_${today}`, focusSeconds.toString());
-    } catch {}
+    if (!writeStorage(`workpulse_focus_seconds_${getTodayDateStr()}`, focusSeconds.toString())) setPersistenceError(true);
   }, [focusSeconds]);
 
-  // Focus timer tick
+  // Focus timer tick: settle from the wall clock so throttled background tabs keep accurate time.
   useEffect(() => {
     if (!isTimerRunning) return;
-    const interval = setInterval(() => {
-      setFocusSeconds((prev) => prev + 1);
-      setTasks(advanceActiveTaskFocus);
-    }, 1000);
-    return () => clearInterval(interval);
+    let anchor = Date.now();
+    const settle = () => {
+      const { seconds, anchorMs } = settleElapsed(anchor, Date.now());
+      anchor = anchorMs;
+      if (seconds === 0) return;
+      setFocusSeconds((prev) => prev + seconds);
+      setTasks((prev) => advanceActiveTaskFocus(prev, seconds));
+    };
+    const interval = setInterval(settle, 1000);
+    document.addEventListener('visibilitychange', settle);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', settle);
+    };
   }, [isTimerRunning]);
 
   // Sync mute state with haptics engine
@@ -1007,5 +1018,6 @@ export function useWorkpulseState() {
     resetTaskTimer,
     handleIncomingIdeMessage,
     spotify,
+    persistenceError,
   };
 }

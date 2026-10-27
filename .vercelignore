@@ -1,0 +1,16 @@
+# The web build only needs the npm workspaces (shared, ui, ide-companion manifests) and the root lockfile.
+node_modules
+**/node_modules
+**/dist
+**/out
+src-tauri
+screen-worker
+openclaw-bridge
+artifacts
+docs
+*.exe
+*.log
+*.db
+*.sqlite
+.env
+.env.*

@@ -61,6 +61,8 @@ Related material:
 - Verify production asset paths and HTTPS behavior. The public web build must not depend on the local Rust server or expose desktop credentials.
 - Authenticate deployment access when needed. Do not place account tokens or signing secrets in source files.
 
+**Status (2026-10-27):** Deployed. Vercel project `hyakkimaru0123-7781s-projects/session`, production URL https://session-xi-mauve.vercel.app (public, HTTPS). Config lives in `vercel.json` and `.vercelignore` at the repo root. Linking also connected the GitHub repository, so pushes may trigger deployments. Interactive browser checks from §4 (background-tab timing, blocked storage, network inspection) are still to be run against this URL.
+
 ## 2. Prepare Windows and macOS downloads
 
 - Add repeatable build automation for a Windows x64 installer and a macOS universal DMG.
